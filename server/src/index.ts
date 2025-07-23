@@ -10,12 +10,36 @@ import errorHandlerMiddleware from "./middlewares/errorHandler";
 import notFoundMiddleware from "./middlewares/notFound";
 import cookieParser from "cookie-parser";
 import logger from "./utils/logger";
+// socket imports
+import { Server } from "socket.io";
+import http from "http";
+import { initializeSocket } from "./modules/reqWall/sockets/socketHandler";
+
+
 
 dotenv.config();
-
 connectDB();
 
 const app = express();
+// Changes for attaching sockets
+const server = http.createServer(app); // Create HTTP server for Socket.IO
+const io = new Server(server, {
+  cors: {
+    origin: process.env.NODE_ENV === "production"
+      ? ["https://event.creativeupaay.com"]
+      : ["http://localhost:5173"],
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
+// Initialize Socket.IO handlers
+initializeSocket(io);
+
+
+
+
+
+
 
 const morganFormat = ":method :url :status :response-time ms";
 app.use(
@@ -88,3 +112,6 @@ const PORT =
     : Number(process.env.PORT) || 5000;
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// Export io for use in controllers
+export { io };
