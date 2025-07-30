@@ -1,25 +1,25 @@
 import { Schema, model, Document, Types } from "mongoose";
 
-export enum ReqTypeEnum {
-  ASK = "ASK",          // asking for help/advice/service
-  OFFER = "OFFER",      // offering help/service
-}
-
-export interface IReqWall extends Document {
-  user: Types.ObjectId;
+export interface IRequirement extends Document {
+  posterId: Types.ObjectId;
+  eventId: Types.ObjectId;
   title: string;
   description: string;
   tags: string[];
-  type: ReqTypeEnum;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const ReqWallSchema = new Schema<IReqWall>(
+const ReqSchema = new Schema<IRequirement>(
   {
-    user: {
+    posterId: {
       type: Schema.Types.ObjectId,
       ref: "User",
+      required: true,
+    },
+    eventId: {
+      type: Schema.Types.ObjectId,
+      ref: "Event", 
       required: true,
     },
     title: {
@@ -37,14 +37,9 @@ const ReqWallSchema = new Schema<IReqWall>(
         type: String,
         trim: true,
       },
-    ],
-    type: {
-      type: String,
-      enum: Object.values(ReqTypeEnum),
-      required: true,
-    },
+    ]
   },
   { timestamps: true }
 );
 
-export const ReqWallModel = model<IReqWall>("ReqWall", ReqWallSchema);
+export const ReqModel = model<IRequirement>("Requirement", ReqSchema);

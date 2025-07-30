@@ -1,16 +1,12 @@
-import express from "express";
-import userRoutes from "./userRoutes";
-import adminRoutes from "./adminRoutes";
-import commonRoutes from "./commonRoutes";
+import { Router } from "express";
+import userRouter from "./userRoutes";
+import organizationRoutes from "./organizationRoutes";
+import authRoutes from "../../modules/auth/authRoutes";
 
-const router = express.Router();
+const router = Router();
 
-router.use("/user", userRoutes);
-router.use("/admin", adminRoutes);
-router.use("/common",commonRoutes)
-
-
-
-
+router.use("/auth", authRoutes);
+router.use("/user", userRouter);
+router.use("/organization", organizationRoutes);
 
 export default router;

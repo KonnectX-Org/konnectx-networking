@@ -4,12 +4,12 @@ import * as orgEventControllers from "../controllers/eventOrgController";
 
 const router = express.Router();
 
-router.get("/createEvent"         ,  asyncHandler(orgEventControllers.createEvent));
-router.get("/getAllEvents"        ,  asyncHandler(orgEventControllers.getAllEvents));
-router.get("/getEventById"        ,  asyncHandler(orgEventControllers.getEventById));
-router.get("/updateEvent"         ,  asyncHandler(orgEventControllers.updateEvent));
-router.get("/deleteEvent"         ,  asyncHandler(orgEventControllers.deleteEvent));
-router.get("/handlePublishQR"     ,  asyncHandler(orgEventControllers.handlePublishQR));
-router.get("/updateAttendeeRoles" ,  asyncHandler(orgEventControllers.updateAttendeeRoles));
+router.post("/create"         ,  asyncHandler(orgEventControllers.createEvent));
+router.get("/"        ,  asyncHandler(orgEventControllers.getAllEvents));
+router.get("/fetch"        ,  asyncHandler(orgEventControllers.getEventById));
+router.put("/edit"         ,  asyncHandler(orgEventControllers.updateEvent));
+router.delete("/delete"         ,  asyncHandler(orgEventControllers.deleteEvent));
+router.put("/publish"     ,  asyncHandler(orgEventControllers.handlePublishQR));
+router.put("/edit-attendee-roles" ,  asyncHandler(orgEventControllers.updateAttendeeRoles));
 
 export default router;
