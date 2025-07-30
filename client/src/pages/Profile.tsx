@@ -16,6 +16,7 @@ import { suggestedProfessions } from "../components/formSections/FormSection4";
 import CustomButton from "../components/CustomButton";
 import { useSnackbar } from "../hooks/SnackbarContext";
 import userApi from "../apis/userApi";
+import SocialLinks from "../components/profile/SocialLinksSection";
 
 export const badgeInfo = [
   {
@@ -656,28 +657,33 @@ const Profile = () => {
                 </div>
               )}
 
-             { editedProfession && <div className="flex items-center">
-                <div className="flex-[0.5] w-full text-sm text-grey">
-                  <p>Role</p>
-                </div>
+              {editedProfession && (
+                <div className="flex items-center">
+                  <div className="flex-[0.5] w-full text-sm text-grey">
+                    <p>Role</p>
+                  </div>
 
-                <div className="flex-[0.5] w-full text-sm text-darkBg">
-                  {isProfessionalDetailsEditing ? (
-                    <input
-                      type="text"
-                      value={editedProfession}
-                      onChange={(e) => {
-                        setEditedProfession(e.target.value);
-                      }}
-                      className="w-full border-b border-grey"
-                    />
-                  ) : (
-                    <p>{editedProfession}</p>
-                  )}
+                  <div className="flex-[0.5] w-full text-sm text-darkBg">
+                    {isProfessionalDetailsEditing ? (
+                      <input
+                        type="text"
+                        value={editedProfession}
+                        onChange={(e) => {
+                          setEditedProfession(e.target.value);
+                        }}
+                        className="w-full border-b border-grey"
+                      />
+                    ) : (
+                      <p>{editedProfession}</p>
+                    )}
+                  </div>
                 </div>
-              </div>}
+              )}
             </div>
           </div>
+
+          {/* Social Links Section */}
+          <SocialLinks />
 
           {/* interests section */}
           {user?.position != "Employee" && user?.position != "Freelancer" && (
