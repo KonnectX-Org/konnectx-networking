@@ -3,11 +3,8 @@ import { NotificationModel } from "../models/notificationModel";
 import mongoose from "mongoose";
 import AppError from "../../../utils/appError";
 
-export const getNotification = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-) => {
+export const getNotification = async (req: Request,res: Response,next: NextFunction) => {
+    
     const userId = req.user?.id;
     const { cursor, limit = 20 } = req.query;
 

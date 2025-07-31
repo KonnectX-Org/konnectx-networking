@@ -10,7 +10,7 @@ export interface IEvent extends Document {
     city: string,
     // country:string,
     banner: string,
-    organizationId: Schema.Types.ObjectId;
+    organizationId: Schema.Types.ObjectId | null;
     attendeeRoles:String[];
     publish:Boolean
 }
@@ -48,9 +48,10 @@ const EventSchema: Schema<IEvent> = new Schema<IEvent>({
         type:String,
     },
     organizationId:{
-        type:Schema.Types.ObjectId,
-        ref:'Organization',
-        required:true,
+        type: Schema.Types.ObjectId,
+        ref: 'Organization',
+        required: false,
+        default: null, 
     },
     attendeeRoles:[
         {

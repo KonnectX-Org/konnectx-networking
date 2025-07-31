@@ -5,11 +5,8 @@ import { RecentSearchModel } from "../models/recentSearchModel";
 
 const SEARCH_LIMIT = 15;
 
-export const addSearchHistory = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-) => {
+export const addSearchHistory = async (req: Request,res: Response,next: NextFunction) => {
+
     const userId = req.user?.id;
     const { searchedUserId } = req.query;
 
@@ -64,11 +61,8 @@ export const addSearchHistory = async (
     })
 }
 
-export const getSearchedUser = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-) => {
+export const getSearchedUser = async (req: Request,res: Response,next: NextFunction) => {
+
     const userId = req.user?.id;
 
     const recentSearches = await RecentSearchModel.aggregate([
@@ -117,11 +111,8 @@ export const getSearchedUser = async (
     })
 }
 
-export const clearAllSearch = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-) => {
+export const clearAllSearch = async (req: Request,res: Response,next: NextFunction) => {
+
     const userId = req.user?.id;
 
     const result = await RecentSearchModel.deleteOne({
@@ -139,11 +130,8 @@ export const clearAllSearch = async (
     }
 }
 
-export const removeSearchedUser = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-) => {
+export const removeSearchedUser = async (req: Request,res: Response,next: NextFunction) => {
+    
     const userId = req.user?.id;
     const { searchedUserId } = req.query;
 

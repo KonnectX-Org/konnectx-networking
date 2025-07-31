@@ -13,11 +13,8 @@ import {
 import { Roles } from "../organization/types/organizationEnums";
 import { UserModel } from "../user/models/userModel";
 
-export const registerOrganization = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
+export const registerOrganization = async (req: Request,res: Response,next: NextFunction): Promise<void> => {
+  
   const { email, password, name, designation, address, organizationType } =
     req.body;
   console.log(`organizationType, ${organizationType}`.cyan);

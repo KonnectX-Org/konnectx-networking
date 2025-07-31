@@ -4,6 +4,12 @@ import { Response } from 'express';
 
 
 const devErrors = (res: Response, error: any) => {
+    
+    console.error("🔥 DEV ERROR 🔥");
+    console.error("Message:", error.message);
+    console.error("Stack:", error.stack);
+    console.error("Full Error:", error);
+
     res.status(error.statusCode).json({
         status: error.statusCode,
         message: error.message,

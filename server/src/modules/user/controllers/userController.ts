@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import AppError from "../../../utils/appError";
 import { UserModel } from "../models/userModel";
 import { EventModel } from "../../event/models/eventModel";
+import { EventUserModel } from "../../event/models/eventUsersModel";
 import mongoose from "mongoose";
 import {
   generateAccessToken,
@@ -50,84 +51,90 @@ const updateUserBadge = async (userId: string, connections: number) => {
 
 
 
-export const createUser = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<Response | void> => {
+
+
+// create user (only in one event at a time )
+export const createUser = async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
+
   const { data } = req.body;
-  if (!data.eventId || !data.name || !data.email)
-    throw new AppError("Feild not found", 400);
+
+  if (!data.eventId || !data.name || !data.email || !data.role || !data.industry) {
+    throw new AppError("Missing required fields", 400);
+  }
 
   const session = await mongoose.startSession();
   session.startTransaction();
 
-  try {
-    data.eventIds = [data.eventId];
-    data.profileImage = `https://api.dicebear.com/5.x/initials/svg?seed=${data.name.replace(/ /g, "_")}`;
+  data.profileImage = `https://api.dicebear.com/5.x/initials/svg?seed=${data.name.replace(/ /g, "_")}`;
 
-    const isUserExist = await UserModel.findOne({email:data.email})
-    if(isUserExist)
-      throw new AppError("User already registerd", 400);
+  let user = await UserModel.findOne({ email: data.email });
 
-    const [user] = await UserModel.create([data], { session });
-    if (!user) throw new AppError("Failed to create new User", 500);
-
-    const updatedEvent = await EventModel.findByIdAndUpdate(
-      data.eventId,
-      { $push: { attendies: user._id } },
-      { new: true, session }
-    );
-
-    await session.commitTransaction();
-    session.endSession();
-
-    let accessToken = generateAccessToken({
-      id: String(user._id),
-      role: Roles.USER,
-    });
-    let refreshToken = generateRefreshToken({
-      id: String(user._id),
-      role: Roles.USER,
-    });
-
-    const updateUser = await UserModel.findByIdAndUpdate(
-      user._id,
-      { refreshToken },
-      { new: true }
-    );
-
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 2 * 60 * 60 * 1000, // 2 hours
-    });
-
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-    return res.status(200).json({
-      success: true,
-      user,
-      // updatedEvent,
-    });
-  } catch (error: any) {
-    await session.abortTransaction();
-    session.endSession();
-    throw new AppError(error.message, 500);
+  if (!user) {
+    const [createdUser] = await UserModel.create([{ ...data }], { session });
+    if (!createdUser) throw new AppError("Failed to create user", 500);
+    user = createdUser;
   }
+
+  const isAlreadyMapped = await EventUserModel.findOne({
+    userId: user._id,
+    eventId: data.eventId,
+  });
+
+  if (isAlreadyMapped) {
+    throw new AppError("User already registered for this event", 400);
+  }
+
+  await EventUserModel.create(
+    [
+      {
+        userId: user._id,
+        eventId: data.eventId,
+        role: data.role,
+        industry: data.industry,
+        lookingToConnectWith: data.lookingToConnectWith || [],
+      },
+    ],
+    { session }
+  );
+
+  await session.commitTransaction();
+  session.endSession();
+
+  const accessToken = generateAccessToken({
+    id: String(user._id),
+    role: Roles.USER,
+  });
+
+  const refreshToken = generateRefreshToken({
+    id: String(user._id),
+    role: Roles.USER,
+  });
+
+  await UserModel.findByIdAndUpdate(user._id, { refreshToken });
+
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 2 * 60 * 60 * 1000,
+  });
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  return res.status(200).json({
+    success: true,
+    user,
+  });
 };
 
-export const UserInfo = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<Response | void> => {
+
+export const UserInfo = async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
+
   const userId = req.user.id;
 
   console.log("userId", userId);
@@ -247,11 +254,8 @@ export const UserInfo = async (
   });
 };
 
-export const updateUser = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<Response | void> => {
+export const updateUser = async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
+
   const { data } = req.body;
   const userId = req.user.id;
 
@@ -266,11 +270,8 @@ export const updateUser = async (
 };
 
 // replace interest to industry
-export const updateInterest = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<Response | void> => {
+export const updateInterest = async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
+  
   const userId = req.user.id;
   const { data } = req.body;
 
@@ -307,11 +308,8 @@ export const updateInterest = async (
   });
 };
 
-export const updateLookingFor = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<Response | void> => {
+export const updateLookingFor = async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
+
   const userId = req.user.id;
   const { data } = req.body;
 
@@ -348,11 +346,8 @@ export const updateLookingFor = async (
   });
 };
 
-export const editProfilePicture = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<Response | void> => {
+export const editProfilePicture = async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
+
   const userId = req.user.id;
 
   if (!req.file) throw new AppError("No file uploaded", 400);
@@ -378,11 +373,8 @@ export const editProfilePicture = async (
   });
 };
 
-export const badgeSplashReadStatus =async(
-  req:Request,
-  res:Response,
-  next:NextFunction
-):Promise<Response|void> =>{
+export const badgeSplashReadStatus =async(req:Request,res:Response,next:NextFunction):Promise<Response|void> =>{
+
   const userId = req.user.id;
 
   const updatedBadgeStatus = await UserModel.findByIdAndUpdate(
@@ -405,11 +397,8 @@ export const badgeSplashReadStatus =async(
 
 // ----------------New API'S------------------
 
-export const updateProfileBio = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const updateProfileBio = async (req: Request,res: Response,next: NextFunction) => {
+
   const userId = req.user.id;
   const { profileBio } = req.body;
 
@@ -432,11 +421,8 @@ export const updateProfileBio = async (
 
 // ----------------- Update socialLinks -----------------
 
-export const updateSocialLinks = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const updateSocialLinks = async (req: Request,res: Response,next: NextFunction) => {
+
   const userId = req.user.id;
   const { socialLinks } = req.body;
 
@@ -459,11 +445,8 @@ export const updateSocialLinks = async (
 
 // ----------------- Update services -----------------
 
-export const updateServices = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const updateServices = async (req: Request,res: Response,next: NextFunction) => {
+  
   const userId = req.user.id;
   const { services } = req.body;
 
