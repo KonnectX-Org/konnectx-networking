@@ -228,6 +228,7 @@ export const UserInfo = async (
         lookingFor: 1,
         interests: 1,
         status: 1,
+        socialLinks:1,
         previousBadgeName: 1,
       },
     },

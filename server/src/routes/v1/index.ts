@@ -5,6 +5,7 @@ import authRoutes from "../../modules/auth/authRoutes";
 
 const router = Router();
 
+
 router.use("/auth", authRoutes);
 router.use("/user", userRouter);
 router.use("/organization", organizationRoutes);

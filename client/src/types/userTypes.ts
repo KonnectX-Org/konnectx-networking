@@ -15,14 +15,15 @@ export interface userI {
   requestReceived: number;
   status: string;
   contactNumber: string;
+  socialLinks: { url: string; type: string }[];
   connections: number;
   friendShipStatus?:
-  | "REQUEST_SENT"
-  | "REQUEST_RECEIVED"
-  | "CONNECTED"
-  | "NOT_CONNECTED";
+    | "REQUEST_SENT"
+    | "REQUEST_RECEIVED"
+    | "CONNECTED"
+    | "NOT_CONNECTED";
   isConnected?: boolean;
-  matchIndex: number
+  matchIndex: number;
 }
 
 export interface userLevelDataI {

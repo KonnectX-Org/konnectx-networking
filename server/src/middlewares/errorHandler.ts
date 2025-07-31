@@ -53,7 +53,7 @@ const errorHandlerMiddleware = (
     next: () => void
 ) => {
     console.log("---errorHandlerMiddleware---");
-    // console.log(err);
+    console.log(err);
     let error: AppError;
 
     err.statusCode = err.statusCode || 500;

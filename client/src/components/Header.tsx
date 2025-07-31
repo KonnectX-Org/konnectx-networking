@@ -4,6 +4,7 @@ import SearchPageComponent from "./SearchPageComponent";
 import { useEffect, useState } from "react";
 import { useUser } from "../hooks/UserContext";
 import userApi from "../apis/userApi";
+import InfoProfileIncomplete from "./InfoProfileIncomplete";
 
 const getColorForCharacters = (
   char1: string | undefined,
@@ -63,6 +64,20 @@ const Header = () => {
   }, []);
 
   const { user } = useUser();
+  const [profileIncomplete, setProfileIncomplete] = useState<number | null>(
+    null
+  );
+
+  useEffect(() => {
+    const fields = [
+      {
+        name: "socialLinks",
+        value: user?.socialLinks?.length && user?.socialLinks?.length > 0,
+      },
+    ];
+    const incompleteFields = fields.filter((field) => !field.value);
+    setProfileIncomplete((incompleteFields.length * 100) / fields.length);
+  }, [user]);
 
   return (
     <header className="flex items-center justify-between px-3 py-3 sticky top-0 left-0 w-full z-50 bg-grey01">
@@ -78,14 +93,15 @@ const Header = () => {
         </div>
       )}
 
-      <div onClick={() => navigate("/profile")} className="flex items-center cursor-pointer space-x-5 ">
+      <div className="flex items-center  space-x-5 ">
         {/* <img
           onClick={() => navigate("/profile")}
           src={user?.profileImage}
           className="w-9 object-cover rounded-full"
         /> */}
         <div
-          className={` text-white w-9 h-9 rounded-full flex items-center justify-center `}
+          onClick={() => navigate("/profile")}
+          className={` text-white cursor-pointer w-9 h-9 rounded-full flex items-center justify-center `}
           style={{
             backgroundColor: getColorForCharacters(
               user?.name.charAt(0),
@@ -97,7 +113,12 @@ const Header = () => {
         </div>
         <div className="flex flex-col">
           <p className="text-xs">Welcome!</p>
-          <p className="font-semibold">{user?.name}</p>
+          <div className="flex gap-2 items-center">
+            <p className="font-semibold">{user?.name}</p>
+            {profileIncomplete && (
+              <InfoProfileIncomplete percentage={profileIncomplete} />
+            )}
+          </div>
         </div>
       </div>
 

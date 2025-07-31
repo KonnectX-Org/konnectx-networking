@@ -2,7 +2,7 @@ import { Model, Schema, model } from "mongoose";
 import { AccountStatusEnum } from "../types/userEnums";
 
 interface ISocialLink {
-  platform: string;
+  type: string;
   url: string;
 }
 
@@ -42,7 +42,7 @@ export interface IUser extends Document {
 
 const SocialLinkSchema = new Schema<ISocialLink>(
   {
-    platform: { type: String, required: true, trim: true },
+    type: { type: String, required: true, trim: true },
     url: { type: String, required: true, trim: true },
   },
   { _id: false }
