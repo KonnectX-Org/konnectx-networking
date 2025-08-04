@@ -1,11 +1,10 @@
 import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
-// import Home from "./pages/Home";
 import FormPage from "./pages/FormPage";
+import LoginPage from "./pages/LoginPage";
 import MainPage from "./pages/MainPage";
 import ConnectPage from "./pages/ConnectPage";
 import Profile from "./pages/Profile";
 import NotificatonsPage from "./pages/NotificationsPage";
-// import { useSnackbar } from "./hooks/SnackbarContext";
 import LayoutWithHeader from "./layouts/LayoutWithHeader";
 import LayoutWithOutHeader from "./layouts/LayoutWithOutHeader";
 import RequestsPage from "./pages/RequestsPage";
@@ -20,7 +19,6 @@ import QRConnecting from "./pages/QRConnecting";
 import ConnectionProfile from "./pages/ConnectionProfile";
 
 const App = () => {
-  // const { showSnackbar } = useSnackbar();
   const [user, setUser] = useState<userI | undefined>(undefined);
   const [userLevelData, setUserLevelData] = useState<
     userLevelDataI | undefined
@@ -40,8 +38,10 @@ const App = () => {
         if (!response.data.userLevelData.badgeSplashRead) navigate("/levelup");
       }
     } catch (e) {
-      navigate("/form/6864dd952cf135f217b9e057");
-      // showSnackbar("Please fill the form first", "warning");
+      // Don't redirect if we're on the login page
+      if (!location.pathname.startsWith('/login')) {
+        navigate("/form/6864dd952cf135f217b9e057");
+      }
     }
   };
 
@@ -58,18 +58,18 @@ const App = () => {
         setUserLevelData={setUserLevelData}
       >
         <Routes>
+          {/* Public routes */}
+          <Route path="/login/:eventId" element={<LoginPage />} />
+          <Route path="/form/:eventId" element={<FormPage />} />
+          
+          {/* Authenticated routes with header */}
           <Route element={<LayoutWithHeader />}>
             <Route path="/home" element={<MainPage />} />
-
             <Route path="/connect/:eventId" element={<ConnectPage />} />
           </Route>
-        </Routes>
 
-        <Routes>
-          <Route path="/" element={<FormPage />} />
-
+          {/* Authenticated routes without header */}
           <Route element={<LayoutWithOutHeader />}>
-            {/*temp form page in the index page*/}
             <Route path="/notifications" element={<NotificatonsPage />} />
             <Route path="/requests/:rtype" element={<RequestsPage />} />
             <Route path="/network" element={<MyNetworkPage />} />
@@ -77,10 +77,13 @@ const App = () => {
             <Route path="/profile/:id" element={<ConnectionProfile />} />
           </Route>
 
+          {/* Other routes */}
           <Route path="/qr" element={<QRPage />} />
           <Route path="/qr-connect/:friendId" element={<QRConnecting />} />
           <Route path="/levelup" element={<LevelUpPage />} />
-          <Route path="/form/:eventId" element={<FormPage />} />
+          
+          {/* Default redirect */}
+          <Route path="/" element={<FormPage />} />
         </Routes>
       </UserProvider>
     </>

@@ -153,6 +153,7 @@ const FormPage = () => {
       if (response.status == 200) navigate(`/connect/${eventId}`);
     } catch (e) {
       showSnackbar("Error in submitting the form", "error");
+      console.log(e);
     }
 
     setIsLoading(false);

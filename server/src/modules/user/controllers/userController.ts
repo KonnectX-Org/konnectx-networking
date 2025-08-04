@@ -135,31 +135,71 @@ export const createUser = async (
   });
 };
 
+export const checkUserEventRegistration = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { eventId } = req.params;
+  const userId = req.user.id;
+
+  const isRegistered = await EventUserModel.findOne({
+    userId: new mongoose.Types.ObjectId(userId),
+    eventId: new mongoose.Types.ObjectId(eventId),
+  });
+
+  return res.status(200).json({
+    success: true,
+    registered: !!isRegistered,
+  });
+};
+
 export const loginUser = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  const { email } = req.body;
-  if (!email) throw new AppError("Field not found", 400);
+  try {
+    const { email } = req.body;
+    
+    // Validate input
+    if (!email) {
+      return next(new AppError("Email is required", 400));
+    }
 
-  const user = await UserModel.findOne({ email: email });
+    // Check user existence
+    const user = await UserModel.findOne({ email });
+    if (!user) {
+      return next(new AppError("User not found. Please register first.", 404));
+    }
 
-  if (!user) {
-    throw new AppError("User not found", 404);
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log("OTP for debugging:", otp); // Remove in production
+
+    // Save OTP with expiry
+    user.otp = otp;
+    user.otpExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
+    await user.save();
+
+    // Send OTP email
+    await sendLoginOtp({
+      email: user.email,
+      otp: otp,
+    });
+
+    // Return success response (without OTP in production)
+    res.status(200).json({
+      success: true,
+      message: "OTP sent successfully",
+      // Don't send OTP in production - only for testing
+      otp: process.env.NODE_ENV === "development" ? otp : undefined
+    });
+
+  } catch (error) {
+    console.error("Login error:", error);
+    next(new AppError("Failed to process login request", 500));
   }
-
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  console.log("OTP : ", otp);
-
-  user.otp = otp;
-  user.otpExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-  await user.save();
-
-  await sendLoginOtp({
-    email: email,
-    otp: otp,
-  });
 };
 
 export const verifyOtp = async (

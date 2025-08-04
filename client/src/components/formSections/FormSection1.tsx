@@ -1,6 +1,7 @@
 import { InputAdornment, TextField } from "@mui/material";
 import screwClockIcon from "../../assets/icons/screwClockIcon.svg";
 import { useSnackbar } from "../../hooks/SnackbarContext";
+import { useNavigate } from "react-router-dom";
 
 // Form for getting the username
 const FormSection1 = ({
@@ -21,6 +22,7 @@ const FormSection1 = ({
   nextForm: Function;
 }) => {
   const { showSnackbar } = useSnackbar();
+  const navigate = useNavigate();
 
   const validAndGoToNext = () => {
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -117,6 +119,16 @@ const FormSection1 = ({
               width: "100%",
             }}
           />
+        {/* Login link below phone number field */}
+        <div className="mt-2">
+          <span>Existing User? </span>
+          <span
+            className="text-blue-600 underline cursor-pointer"
+            onClick={() => navigate("/login/6864dd952cf135f217b9e057")}
+          >
+            Login
+          </span>
+        </div>
         </div>
       </div>
 

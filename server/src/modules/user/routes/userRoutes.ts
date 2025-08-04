@@ -8,6 +8,10 @@ const router = express.Router();
 // Create user (usually no auth needed if it's a registration endpoint)
 router.route("/create").post(asyncHandler(userControllers.createUser));
 
+// Login endpoints
+router.route("/login").post(asyncHandler(userControllers.loginUser));
+router.route("/verify-otp").post(asyncHandler(userControllers.verifyOtp));
+
 // Get current user info
 router.route("/").get(authenticate, asyncHandler(userControllers.UserInfo));
 
@@ -19,12 +23,17 @@ router
 // Update interests or preferences
 router
   .route("/edit-interest")
-  .put(authenticate, asyncHandler(userControllers.updateUser));
+  .put(authenticate, asyncHandler(userControllers.updateInterest));
 
 // Update looking for
 router
   .route("/edit-lookingFor")
   .put(authenticate, asyncHandler(userControllers.updateLookingFor));
+
+// Check event registration status
+router
+  .route("/:eventId/check-registration")
+  .get(authenticate, asyncHandler(userControllers.checkUserEventRegistration));
 
 // Edit profile picture
 router
