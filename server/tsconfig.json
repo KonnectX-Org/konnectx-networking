@@ -9,6 +9,6 @@
     "skipLibCheck": true,             // Skip type-checking of declaration files
     "forceConsistentCasingInFileNames": true // Enforce consistent casing in imports
   },
-  "include": ["src/**/*"],            // Include all TypeScript files in src
+  "include": ["src/**/*", "src/services/emails/templates/auth/loginUserOtp/loginUserOtp.ts"],            // Include all TypeScript files in src
   "exclude": ["node_modules", "dist"] // Exclude unnecessary directories
 }

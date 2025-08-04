@@ -126,6 +126,7 @@ export const updateEvent = async (req: Request,res: Response,next: NextFunction)
 
 
 // deleteEvent
+// isme eventUser ke vo saare delete , jo jo is event me the 
 export const deleteEvent = async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
     const { eventId } = req.query;
     const organizationId = req.organization.id;

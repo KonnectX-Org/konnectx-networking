@@ -51,7 +51,12 @@ const App = () => {
 
   return (
     <>
-      <UserProvider user={user} userLevelData={userLevelData}>
+      <UserProvider 
+        user={user} 
+        userLevelData={userLevelData} 
+        setUser={setUser}
+        setUserLevelData={setUserLevelData}
+      >
         <Routes>
           <Route element={<LayoutWithHeader />}>
             <Route path="/home" element={<MainPage />} />

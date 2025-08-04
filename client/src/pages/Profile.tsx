@@ -17,6 +17,7 @@ import CustomButton from "../components/CustomButton";
 import { useSnackbar } from "../hooks/SnackbarContext";
 import userApi from "../apis/userApi";
 import SocialLinks from "../components/profile/SocialLinksSection";
+import ServicesSection from "../components/profile/ServicesSection";
 
 export const badgeInfo = [
   {
@@ -684,6 +685,7 @@ const Profile = () => {
 
           {/* Social Links Section */}
           <SocialLinks />
+          <ServicesSection />
 
           {/* interests section */}
           {user?.position != "Employee" && user?.position != "Freelancer" && (

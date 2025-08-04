@@ -5,11 +5,8 @@ import { OrganizationModel } from "../models/organizationModel";
 import mongoose from "mongoose";
 
 
-export const getOrganizationInfo =async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-): Promise<Response | void> => {
+export const getOrganizationInfo =async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
+
     const organizationId = req.organization.id;
 
     if (!organizationId)
@@ -47,11 +44,8 @@ export const getOrganizationInfo =async (
 
 
 
-export const updateOrganization = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-): Promise<Response | void> => {
+export const updateOrganization = async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
+    
     const { data } = req.body;
     const organizationId = req.organization.id;
 

@@ -6,8 +6,8 @@ export interface IEventUser extends Document {
   isCheckedIn: boolean;
   checkedInAt?: Date;
 
-  role: string;
-  industry: number; // 👈 Linked to Industry.taxoId
+  // role: string;
+  industry: number; // inked to Industry.taxoId
   lookingToConnectWith: string[];
 }
 
@@ -31,13 +31,13 @@ const EventUserSchema = new Schema<IEventUser>(
       type: Date,
     },
 
-    // ➕ Updated Fields
-    role: {
-      type: String,
-      required: true,
-    },
+    // Updated Fields
+    // role: {
+      // type: String,
+      // required: true,
+    // },
     industry: {
-      type: Number, // 🟢 refers to Industry.taxoId
+      type: Number, //  refers to Industry.taxoId
       required: true,
       ref: "Industry",
     },

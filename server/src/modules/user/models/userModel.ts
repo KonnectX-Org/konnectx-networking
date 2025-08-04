@@ -20,25 +20,25 @@ export interface IUser extends Document {
   profession: string;
   position: string;
   industry: string[];
-  help: string[];                                        
+  help: string[];
   company: string;
   instituteName: string;
-  courseName:string;
+  courseName: string;
   lookingFor: string[];
   interests: string[];
-  badgeSplashRead:Boolean;
-  previousBadgeName:String;
+  badgeSplashRead: Boolean;
+  previousBadgeName: String;
   status: AccountStatusEnum;
   refreshToken: string;
   resetPasswordToken: string;
-  resetPasswordExpires: Date;
+  resetPasswordExpires: Date | null;
   emailVerified: boolean;
-
   profileBio: string;
   socialLinks: ISocialLink[];
   services: IService[];
+  otp: string | null;
+  otpExpiry: Date | null;
 }
-
 
 const SocialLinkSchema = new Schema<ISocialLink>(
   {
@@ -57,117 +57,128 @@ const ServiceSchema = new Schema<IService>(
   { _id: false }
 );
 
-const UserSchema: Schema<IUser> = new Schema<IUser>({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    trim:true
-  },
-  contactNumber: {
-    type: String,
-    trim:true,
-  },
-  profileImage: {
-    type: String
-  },
-  profession: {
-    type: String,
-    trim:true
-  },
-  position: {
-    type: String,
-    trim:true
-  },
-  industry: [
-    {
+const UserSchema: Schema<IUser> = new Schema<IUser>(
+  {
+    name: {
       type: String,
-      trim:true
-    }
-  ],
-  help: [
-    {
+      required: true,
+      trim: true,
+    },
+    email: {
       type: String,
-      trim:true,
-    }
-  ],
-  company: {
-    type: String,
-    trim:true
-  },
-  instituteName: {
-    type: String,
-    trim:true
-  },
-  courseName:{
-    type:String,
-    trim:true
-  },
-  lookingFor: [
-    {
+      required: true,
+      unique: true,
+      trim: true,
+    },
+    contactNumber: {
       type: String,
-      trim:true
-    }
-  ],
-  interests: [
-    {
+      trim: true,
+    },
+    profileImage: {
       type: String,
-      trim:true
-    }
-  ],
-  badgeSplashRead:{
-    type:Boolean,
-    default:true,
+    },
+    profession: {
+      type: String,
+      trim: true,
+    },
+    position: {
+      type: String,
+      trim: true,
+    },
+    industry: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    help: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    company: {
+      type: String,
+      trim: true,
+    },
+    instituteName: {
+      type: String,
+      trim: true,
+    },
+    courseName: {
+      type: String,
+      trim: true,
+    },
+    lookingFor: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    interests: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    badgeSplashRead: {
+      type: Boolean,
+      default: true,
+    },
+    previousBadgeName: {
+      type: String,
+      default: "Parmanu",
+    },
+    status: {
+      type: String,
+      enum: Object.values(AccountStatusEnum),
+      required: true,
+      default: AccountStatusEnum.ACTIVE,
+    },
+    emailVerified: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
+    refreshToken: {
+      type: String,
+    },
+    resetPasswordToken: {
+      type: String,
+    },
+    resetPasswordExpires: {
+      type: Date,
+    },
+    profileBio: {
+      type: String,
+      default: null,
+    },
+    socialLinks: {
+      type: [SocialLinkSchema],
+      default: [],
+    },
+    services: {
+      type: [ServiceSchema],
+      default: [],
+    },
+    otp: {
+      type: String,
+      default: null,
+    },
+    otpExpiry: {
+      type: Date,
+      default: null,
+    },
   },
-  previousBadgeName:{
-    type:String,
-    default:"Parmanu"
-  },
-  status: {
-    type: String,
-    enum: Object.values(AccountStatusEnum),
-    required: true,
-    default: AccountStatusEnum.ACTIVE
-  },
-  emailVerified: {
-    type: Boolean,
-    required: true,
-    default: false
-  },
-  refreshToken: {
-    type: String
-  },
-  resetPasswordToken: {
-    type: String
-  },
-  resetPasswordExpires: {
-    type: Date
-  }, 
-  profileBio : {
-    type : String,
-    default : null
-  },
-  socialLinks: { 
-    type: [SocialLinkSchema], 
-    default: [] 
-  },
-  services: { 
-    type: [ServiceSchema], 
-    default: [] 
-  },
-}, {
-  timestamps: true
-});
+  {
+    timestamps: true,
+  }
+);
 
 // model for the user
 export const UserModel: Model<IUser> = model<IUser>("User", UserSchema);
 
-// Changes can be made 
+// Changes can be made
 // eventIds: Schema.Types.ObjectId[];
 
 // already reg -->> email otp

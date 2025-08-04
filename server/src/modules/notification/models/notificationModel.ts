@@ -3,7 +3,7 @@ import { NotificationEnum } from "../types/notificationEnums";
 
 export interface INotification extends Document {
     userId: Schema.Types.ObjectId,  //  particular user ke notification filter karne ke liye 
-    type: NotificationEnum;                           // request recived,accepted, 
+    type: NotificationEnum;          // request recived,accepted, 
     message: string;
     isRead: boolean;
     reference?: Schema.Types.ObjectId   // Kisne kiya hai , particualr koi kaam

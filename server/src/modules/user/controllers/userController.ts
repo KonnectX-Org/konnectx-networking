@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import AppError from "../../../utils/appError";
 import { UserModel } from "../models/userModel";
 import { EventModel } from "../../event/models/eventModel";
+import { EventUserModel } from "../../event/models/eventUsersModel";
 import mongoose from "mongoose";
 import {
   generateAccessToken,
@@ -11,15 +12,13 @@ import { Roles } from "../../organization/types/organizationEnums";
 import { imageUploader } from "../../../utils/imageUploader";
 import { RequestStatusEnum } from "../../friendManagement/types/friendManagementEnums";
 import { getBadgeInfo } from "../../../utils/badgeLevels";
-
+import { sendLoginOtp } from "../../../services/emails/triggers/auth/loginUserOtp";
 
 // This is a functio used in UserInfo API
 const updateUserBadge = async (userId: string, connections: number) => {
-
   const user = await UserModel.findById(
     new mongoose.Types.ObjectId(userId)
   ).select("previousBadgeName badgeSplashRead");
-
 
   if (!user) return {};
   const previousBadgeName = user.previousBadgeName;
@@ -31,9 +30,8 @@ const updateUserBadge = async (userId: string, connections: number) => {
 
   const { badgeName, level, subText } = badgeInfo;
 
-
   if (previousBadgeName !== null && previousBadgeName !== badgeName) {
-    user.badgeSplashRead = false
+    user.badgeSplashRead = false;
   }
 
   user.previousBadgeName = badgeName;
@@ -48,79 +46,177 @@ const updateUserBadge = async (userId: string, connections: number) => {
   };
 };
 
-
-
+// create user (only in one event at a time )
 export const createUser = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<Response | void> => {
   const { data } = req.body;
-  if (!data.eventId || !data.name || !data.email)
-    throw new AppError("Feild not found", 400);
+  console.log("Data : ", data);
+  if (
+    !data.eventId ||
+    !data.name ||
+    !data.email ||
+    // !data.role ||
+    !data.industry
+  ) {
+    throw new AppError("Missing required fields", 400);
+  }
 
   const session = await mongoose.startSession();
   session.startTransaction();
 
-  try {
-    data.eventIds = [data.eventId];
-    data.profileImage = `https://api.dicebear.com/5.x/initials/svg?seed=${data.name.replace(/ /g, "_")}`;
+  data.profileImage = `https://api.dicebear.com/5.x/initials/svg?seed=${data.name.replace(/ /g, "_")}`;
 
-    const isUserExist = await UserModel.findOne({email:data.email})
-    if(isUserExist)
-      throw new AppError("User already registerd", 400);
+  let user = await UserModel.findOne({ email: data.email });
 
-    const [user] = await UserModel.create([data], { session });
-    if (!user) throw new AppError("Failed to create new User", 500);
-
-    const updatedEvent = await EventModel.findByIdAndUpdate(
-      data.eventId,
-      { $push: { attendies: user._id } },
-      { new: true, session }
-    );
-
-    await session.commitTransaction();
-    session.endSession();
-
-    let accessToken = generateAccessToken({
-      id: String(user._id),
-      role: Roles.USER,
-    });
-    let refreshToken = generateRefreshToken({
-      id: String(user._id),
-      role: Roles.USER,
-    });
-
-    const updateUser = await UserModel.findByIdAndUpdate(
-      user._id,
-      { refreshToken },
-      { new: true }
-    );
-
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 2 * 60 * 60 * 1000, // 2 hours
-    });
-
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-    return res.status(200).json({
-      success: true,
-      user,
-      // updatedEvent,
-    });
-  } catch (error: any) {
-    await session.abortTransaction();
-    session.endSession();
-    throw new AppError(error.message, 500);
+  if (!user) {
+    const [createdUser] = await UserModel.create([{ ...data }], { session });
+    if (!createdUser) throw new AppError("Failed to create user", 500);
+    user = createdUser;
   }
+
+  const isAlreadyMapped = await EventUserModel.findOne({
+    userId: user._id,
+    eventId: data.eventId,
+  });
+
+  if (isAlreadyMapped) {
+    throw new AppError("User already registered for this event", 400);
+  }
+
+  await EventUserModel.create(
+    [
+      {
+        userId: user._id,
+        eventId: data.eventId,
+        // role: data.role,
+        // industry: data.industry, // Temporarily commented out
+        industry: 5,
+        lookingToConnectWith: data.lookingToConnectWith || [],
+      },
+    ],
+    { session }
+  );
+
+  await session.commitTransaction();
+  session.endSession();
+
+  const accessToken = generateAccessToken({
+    id: String(user._id),
+    role: Roles.USER,
+  });
+
+  const refreshToken = generateRefreshToken({
+    id: String(user._id),
+    role: Roles.USER,
+  });
+
+  await UserModel.findByIdAndUpdate(user._id, { refreshToken });
+
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 2 * 60 * 60 * 1000,
+  });
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  return res.status(200).json({
+    success: true,
+    user,
+  });
+};
+
+export const loginUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { email } = req.body;
+  if (!email) throw new AppError("Field not found", 400);
+
+  const user = await UserModel.findOne({ email: email });
+
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  console.log("OTP : ", otp);
+
+  user.otp = otp;
+  user.otpExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+  await user.save();
+
+  await sendLoginOtp({
+    email: email,
+    otp: otp,
+  });
+};
+
+export const verifyOtp = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<Response | void> => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) return next(new AppError("Missing fields", 400));
+
+  const user = await UserModel.findOne({ email });
+  if (!user) return next(new AppError("User not found", 404));
+
+  if (
+    !user.otp ||
+    !user.otpExpiry ||
+    user.otp !== otp ||
+    user.otpExpiry < new Date()
+  ) {
+    return next(new AppError("Invalid or expired OTP", 400));
+  }
+
+  user.otp = null;
+  user.otpExpiry = null;
+  await user.save();
+
+  const accessToken = generateAccessToken({
+    id: String(user._id),
+    role: Roles.USER,
+  });
+
+  const refreshToken = generateRefreshToken({
+    id: String(user._id),
+    role: Roles.USER,
+  });
+
+  await UserModel.findByIdAndUpdate(user._id, { refreshToken });
+
+  res.cookie("accessToken", accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 2 * 60 * 60 * 1000,
+  });
+
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+
+  return res.status(200).json({
+    success: true,
+    user,
+  });
 };
 
 export const UserInfo = async (
@@ -224,11 +320,12 @@ export const UserInfo = async (
         industry: 1,
         company: 1,
         instituteName: 1,
+        services: 1,
         courseName: 1,
         lookingFor: 1,
         interests: 1,
         status: 1,
-        socialLinks:1,
+        socialLinks: 1,
         previousBadgeName: 1,
       },
     },
@@ -379,30 +476,28 @@ export const editProfilePicture = async (
   });
 };
 
-export const badgeSplashReadStatus =async(
-  req:Request,
-  res:Response,
-  next:NextFunction
-):Promise<Response|void> =>{
+export const badgeSplashReadStatus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<Response | void> => {
   const userId = req.user.id;
 
   const updatedBadgeStatus = await UserModel.findByIdAndUpdate(
     new mongoose.Types.ObjectId(userId),
     {
-      $set:{ badgeSplashRead: true }
+      $set: { badgeSplashRead: true },
     },
-    { new: true}
-  ) ;
+    { new: true }
+  );
 
-  if(!updatedBadgeStatus)
-    throw new AppError("Failed to updated status", 500);
+  if (!updatedBadgeStatus) throw new AppError("Failed to updated status", 500);
 
   return res.status(200).json({
-    sucess:true,
-    badgeSplashRead : updatedBadgeStatus.badgeSplashRead
-  })
-}
-
+    sucess: true,
+    badgeSplashRead: updatedBadgeStatus.badgeSplashRead,
+  });
+};
 
 // ----------------New API'S------------------
 

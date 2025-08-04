@@ -81,42 +81,36 @@ export const registerOrganization = async (
 };
 
 // user/organization
-export const login = async (
+export const loginOrganization = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<Response | void> => {
-  const { email, password, role } = req.body;
+  const { email, password } = req.body;
 
-  if (!email || !role) throw new AppError("Field not found", 400);
-
-  if (!Object.values(Roles).includes(role)) {
-    return next(new AppError("Invalid Role", StatusCodes.FORBIDDEN));
-  }
+  if (!email) throw new AppError("Field not found", 400);
+  if (!password) throw new AppError("Password Field is required", 400);
 
   let accessToken;
   let refreshToken;
 
-  if (role === Roles.ORGANIZATION) {
-    if (!password) throw new AppError("Password Field is required", 400);
+  if (!password) throw new AppError("Password Field is required", 400);
 
-    const user = await OrganizationModel.findOne({ email });
-    if (!user) throw new AppError("Email is not registerd", 404);
+  const user = await OrganizationModel.findOne({ email });
+  if (!user) throw new AppError("Email is not registerd", 404);
 
-    if (!(await bcrypt.compare(password, user.password)))
-      return next(new AppError("Invalid Password", StatusCodes.FORBIDDEN));
+  if (!(await bcrypt.compare(password, user.password)))
+    return next(new AppError("Invalid Password", StatusCodes.FORBIDDEN));
 
-    accessToken = generateAccessToken({ id: String(user._id), role });
-    refreshToken = generateRefreshToken({ id: String(user._id), role });
-    await OrganizationModel.findByIdAndUpdate(user._id, { refreshToken });
-  } else if (role === Roles.USER) {
-    const user = await UserModel.findOne({ email });
-    if (!user) throw new AppError("Email is not registed", 404);
-
-    accessToken = generateAccessToken({ id: String(user._id), role });
-    refreshToken = generateRefreshToken({ id: String(user._id), role });
-    await UserModel.findByIdAndUpdate(user._id, { refreshToken });
-  }
+  accessToken = generateAccessToken({
+    id: String(user._id),
+    role: Roles.ORGANIZATION,
+  });
+  refreshToken = generateRefreshToken({
+    id: String(user._id),
+    role: Roles.ORGANIZATION,
+  });
+  await OrganizationModel.findByIdAndUpdate(user._id, { refreshToken });
 
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
@@ -137,6 +131,7 @@ export const login = async (
     message: "Login sucessfully",
   });
 };
+
 
 // user/orgnization
 export const logout = async (

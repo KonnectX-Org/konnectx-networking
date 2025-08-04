@@ -70,6 +70,13 @@ const Header = () => {
 
   useEffect(() => {
     const fields = [
+      { name: "name", value: user?.name },
+      { name: "email", value: user?.email },
+      { name: "industry", value: user?.industry },
+      {
+        name: "services",
+        value: user?.services?.length && user?.services?.length > 0,
+      },
       {
         name: "socialLinks",
         value: user?.socialLinks?.length && user?.socialLinks?.length > 0,
@@ -115,9 +122,9 @@ const Header = () => {
           <p className="text-xs">Welcome!</p>
           <div className="flex gap-2 items-center">
             <p className="font-semibold">{user?.name}</p>
-            {profileIncomplete && (
-              <InfoProfileIncomplete percentage={profileIncomplete} />
-            )}
+            {profileIncomplete ? (
+              <InfoProfileIncomplete percentageIncomplete={profileIncomplete} />
+            ) : null}
           </div>
         </div>
       </div>

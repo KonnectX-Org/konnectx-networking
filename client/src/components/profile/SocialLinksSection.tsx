@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import userApi from "../../apis/userApi";
-import { Plus, Check, X } from "lucide-react";
+import { Plus, Check, X, CircleAlert } from "lucide-react";
 import { Instagram, LinkedIn } from "@mui/icons-material";
 import { Icon } from "@iconify/react";
 import { useUser } from "../../hooks/UserContext";
@@ -14,7 +14,7 @@ interface SocialLink {
 }
 
 export default function SocialLinks() {
-  const { user } = useUser();
+  const { user, updateUser } = useUser();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [links, setLinks] = useState<SocialLink[]>([]);
@@ -88,7 +88,17 @@ export default function SocialLinks() {
           url: link.url,
         })),
       };
-      await userApi.put("/user/update-socials", payload);
+      const response = await userApi.put("/user/update-social-links", payload);
+
+      // Update user context after successful API call
+      if (response.status === 200 && user) {
+        updateUser({
+          socialLinks: linksToUpdate.map((link) => ({
+            type: link.type,
+            url: link.url,
+          })),
+        });
+      }
     } catch (err: any) {
       setError(err?.response?.data?.message || "Failed to update social links");
     } finally {
@@ -184,7 +194,12 @@ export default function SocialLinks() {
       {error && <div className="text-xs text-red-500 mb-2">{error}</div>}
 
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium">Social</h3>
+        <div className="flex gap-2 items-center">
+          <h3 className="text-sm font-medium">Social Links</h3>
+          {links.length === 0 && (
+            <CircleAlert size={14} className="text-red-500" />
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {links.length > 0 && (
             <button
@@ -231,63 +246,67 @@ export default function SocialLinks() {
       </div>
 
       <div className="space-y-3">
-        {links.map((link, index) => (
-          <div key={index} className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
-              <link.icon size={16} className="text-gray-600" />
-            </div>
+        {links.length > 0 ? (
+          links.map((link, index) => (
+            <div key={index} className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
+                <link.icon size={16} className="text-gray-600" />
+              </div>
 
-            {editingIndex === index ? (
-              <>
-                <input
-                  type="text"
-                  value={editingUrl}
-                  onChange={(e) => handleEditUrl(index, e.target.value)}
-                  className="flex-1 w-4 px-3 py-2 border border-gray-200 rounded-md text-sm"
-                  autoFocus
-                />
-                <button
-                  onClick={() => handleSaveEdit(index)}
-                  className="p-2  rounded"
-                  title="Save"
-                >
-                  <Check size={16} />
-                </button>
-                <button
-                  onClick={handleCancelEdit}
-                  className="p-2   rounded"
-                  title="Cancel"
-                >
-                  <X size={16} />
-                </button>
-              </>
-            ) : (
-              <>
-                <input
-                  type="text"
-                  value={link.url}
-                  readOnly
-                  className={`flex-1 px-3 py-2 border border-gray-200 rounded-md text-sm ${
-                    isEditMode
-                      ? "bg-white cursor-pointer hover:bg-gray-50"
-                      : "bg-gray-50"
-                  }`}
-                  onClick={() => isEditMode && startEditing(index)}
-                  title={isEditMode ? "Click to edit" : ""}
-                />
-                {isEditMode && (
+              {editingIndex === index ? (
+                <>
+                  <input
+                    type="text"
+                    value={editingUrl}
+                    onChange={(e) => handleEditUrl(index, e.target.value)}
+                    className="flex-1 w-4 px-3 py-2 border border-gray-200 rounded-md text-sm"
+                    autoFocus
+                  />
                   <button
-                    onClick={() => handleDelete(index)}
-                    className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"
-                    title="Delete link"
+                    onClick={() => handleSaveEdit(index)}
+                    className="p-2  rounded"
+                    title="Save"
+                  >
+                    <Check size={16} />
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="p-2   rounded"
+                    title="Cancel"
                   >
                     <X size={16} />
                   </button>
-                )}
-              </>
-            )}
-          </div>
-        ))}
+                </>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    value={link.url}
+                    readOnly
+                    className={`flex-1 px-3 py-2 border border-gray-200 rounded-md text-sm ${
+                      isEditMode
+                        ? "bg-white cursor-pointer hover:bg-gray-50"
+                        : "bg-gray-50"
+                    }`}
+                    onClick={() => isEditMode && startEditing(index)}
+                    title={isEditMode ? "Click to edit" : ""}
+                  />
+                  {isEditMode && (
+                    <button
+                      onClick={() => handleDelete(index)}
+                      className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"
+                      title="Delete link"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          ))
+        ) : (
+          <div className="text-gray-500 text-sm">No social links added</div>
+        )}
       </div>
     </div>
   );

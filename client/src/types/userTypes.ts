@@ -16,6 +16,7 @@ export interface userI {
   status: string;
   contactNumber: string;
   socialLinks: { url: string; type: string }[];
+  services: { name: string }[];
   connections: number;
   friendShipStatus?:
     | "REQUEST_SENT"

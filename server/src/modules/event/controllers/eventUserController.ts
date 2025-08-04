@@ -16,9 +16,6 @@ import { FriendModel } from "../../friendManagement/models/friendModel";
 // searchGuest 
 
 
-
-
-
 // Get all guests of a particular event 
 export const getGuestOfAnEvent = async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
 
