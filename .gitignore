@@ -4,7 +4,7 @@ server/node_modules
 
 # frontend/dist
 server/dist
-client/dist
+# client/dist
 
 # Enviroment variables
 client/.env
