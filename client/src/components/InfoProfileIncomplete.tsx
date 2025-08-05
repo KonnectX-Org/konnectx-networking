@@ -33,7 +33,7 @@ const InfoProfileIncomplete = ({
         onClick={() => setIsOpen(true)}
       />
       {isOpen && (
-        <div className="absolute top-5 left-0 z-40 p-2 bg-white border rounded-xl shadow-lg w-[200px] flex flex-col items-center">
+        <div className="absolute top-5 left-1/2 transform -translate-x-1/2 z-40 p-2 bg-white border rounded-xl shadow-lg w-[200px] flex flex-col items-center">
           <CircularProgress
             determinate
             value={100 - percentageIncomplete}

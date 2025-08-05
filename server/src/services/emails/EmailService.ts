@@ -1,4 +1,4 @@
-import { Resend } from 'resend';
+import { Resend } from "resend";
 
 export interface SendEmailOptions {
   to: string | string[];
@@ -22,11 +22,12 @@ export class EmailService {
   }
 
   public async sendEmail(options: SendEmailOptions): Promise<void> {
-    await this.resend.emails.send({
-      from: `E360 Consult <${process.env.EMAIL_FROM}>`,
+    const response = await this.resend.emails.send({
+      from: `KonnectX <${process.env.EMAIL_FROM}>`,
       to: options.to,
       subject: options.subject,
       html: options.html,
     });
+    console.log("Email sent successfully:", response);
   }
 }

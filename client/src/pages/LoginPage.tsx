@@ -2,13 +2,19 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSnackbar } from "../hooks/SnackbarContext";
 import userApi from "../apis/userApi";
-import { TextField, Button, Box, Typography, CircularProgress } from "@mui/material";
+import {
+  TextField,
+  Button,
+  Box,
+  Typography,
+  CircularProgress,
+} from "@mui/material";
 
 const LoginPage = () => {
   const eventId = "6864dd952cf135f217b9e057";
   const { showSnackbar } = useSnackbar();
   const navigate = useNavigate();
-  
+
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
@@ -16,27 +22,27 @@ const LoginPage = () => {
   const [resendDisabled, setResendDisabled] = useState(false);
   const [resendTimer, setResendTimer] = useState(30);
 
-const handleSendOtp = async () => {
-  if (!email) {
-    showSnackbar("Please enter your email", "warning");
-    return;
-  }
+  const handleSendOtp = async () => {
+    if (!email) {
+      showSnackbar("Please enter your email", "warning");
+      return;
+    }
 
-  try {
-    setLoading(true);
-    console.log("Sending OTP request..."); // Add this
-    const response = await userApi.post("/user/login", { email });
-    console.log("OTP response:", response); // Add this
-    setOtpSent(true);
-    showSnackbar("OTP sent to your email", "success");
-    startResendTimer();
-  } catch (error) {
-    console.error("OTP Error:", error); // Add this to see the full error
-    showSnackbar("Failed to send OTP", "error");
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      setLoading(true);
+      console.log("Sending OTP request..."); // Add this
+      const response = await userApi.post("/user/login", { email });
+      console.log("OTP response:", response); // Add this
+      setOtpSent(true);
+      showSnackbar("OTP sent to your email", "success");
+      startResendTimer();
+    } catch (error) {
+      console.error("OTP Error:", error); // Add this to see the full error
+      showSnackbar("Failed to send OTP", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const startResendTimer = () => {
     setResendDisabled(true);
@@ -61,15 +67,14 @@ const handleSendOtp = async () => {
     try {
       setLoading(true);
       const response = await userApi.post("/user/verify-otp", { email, otp });
-      
+
       if (response.data.success) {
-        // Check if user is registered for this event
-        const eventCheck = await userApi.get(`/user/${eventId}/check-registration`);
-        
+        const eventCheck = await userApi.get(
+          `/user/${eventId}/check-registration`
+        );
         if (eventCheck.data.registered) {
-          navigate(`/home`);
+          navigate(`/connect/${eventId}`);
         } else {
-          // If not registered, redirect to registration form
           navigate(`/form/${eventId}`);
         }
       }
@@ -85,13 +90,12 @@ const handleSendOtp = async () => {
   };
 
   return (
-    <Box sx={{ maxWidth: 400, mx: "auto", mt: 8, p: 3 }}>
-      <Typography variant="h4" gutterBottom>
+    <Box sx={{ maxWidth: 400, mx: "auto", mt: 2, p: 3 }}>
+      {/* <Typography variant="h4" gutterBottom>
         Login
-      </Typography>
-      <Typography variant="body1" gutterBottom>
-        Login to access the event
-      </Typography>
+      </Typography> */}
+      <h1 className="text-darkBg text-3xl font-bold">Login</h1>
+      <p className="text-darkBg text-base mb-4 ">Login to access the event</p>
 
       <TextField
         fullWidth
@@ -108,23 +112,22 @@ const handleSendOtp = async () => {
           fullWidth
           label="OTP"
           value={otp}
-          onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+          onChange={(e) =>
+            setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+          }
           margin="normal"
           sx={{ mb: 2 }}
           inputProps={{
-            inputMode: 'numeric',
-            pattern: '[0-9]*',
+            inputMode: "numeric",
+            pattern: "[0-9]*",
           }}
         />
       )}
 
-      <Button
-        fullWidth
-        variant="contained"
-        color="primary"
+      <button
         onClick={otpSent ? handleVerifyOtp : handleSendOtp}
         disabled={loading}
-        sx={{ mt: 2, height: 48 }}
+        className="w-full bg-darkBg text-white py-2 px-4 rounded"
       >
         {loading ? (
           <CircularProgress size={24} color="inherit" />
@@ -133,12 +136,12 @@ const handleSendOtp = async () => {
         ) : (
           "Send OTP"
         )}
-      </Button>
+      </button>
 
       {otpSent && (
-        <Box sx={{ mt: 2, textAlign: 'center' }}>
+        <Box sx={{ mt: 2, textAlign: "center" }}>
           <Typography variant="body2" sx={{ mb: 1 }}>
-            Didn't receive OTP? 
+            Didn't receive OTP?
           </Typography>
           <Button
             variant="text"
