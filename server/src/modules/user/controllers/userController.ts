@@ -71,11 +71,16 @@ export const createUser = async (
   let user = await UserModel.findOne({ email: data.email });
 
   if (!user) {
-    const [createdUser] = await UserModel.create([{ 
-      name: data.name,
-      email: data.email,
-      // Only basic identity fields
-    }], { session });
+    const [createdUser] = await UserModel.create(
+      [
+        {
+          name: data.name,
+          email: data.email,
+          // Only basic identity fields
+        },
+      ],
+      { session }
+    );
     if (!createdUser) throw new AppError("Failed to create user", 500);
     user = createdUser;
   }
@@ -101,7 +106,11 @@ export const createUser = async (
         profileImage: profileImage,
         profession: data.profession,
         position: data.position,
-        industry: Array.isArray(data.industry) ? data.industry : (data.industry ? [data.industry] : []),
+        industry: Array.isArray(data.industry)
+          ? data.industry
+          : data.industry
+            ? [data.industry]
+            : [],
         help: data.help || [],
         company: data.company,
         instituteName: data.instituteName,
@@ -109,7 +118,14 @@ export const createUser = async (
         lookingFor: data.lookingFor || [],
         interests: data.interests || [],
         profileBio: data.profileBio,
-        socialLinks: data.socialLinks || [],
+        socialLinks: data.linkedin
+          ? [
+              {
+                type: "linkedin",
+                url: data.linkedin,
+              },
+            ]
+          : [],
         services: data.services || [],
         lookingToConnectWith: data.lookingToConnectWith || [],
       },
@@ -173,7 +189,7 @@ export const checkUserEventRegistration = async (
     return res.status(200).json({
       success: true,
       registered: false,
-      message: "User authenticated for different event"
+      message: "User authenticated for different event",
     });
   }
 
@@ -195,7 +211,7 @@ export const loginUser = async (
 ) => {
   try {
     const { email, eventId } = req.body;
-    
+
     // Validate input
     if (!email || !eventId) {
       return next(new AppError("Email and eventId are required", 400));
@@ -208,11 +224,11 @@ export const loginUser = async (
     }
 
     // Check if user is registered for this event
-    const eventUser = await EventUserModel.findOne({ 
-      userId: user._id, 
-      eventId: new mongoose.Types.ObjectId(eventId) 
+    const eventUser = await EventUserModel.findOne({
+      userId: user._id,
+      eventId: new mongoose.Types.ObjectId(eventId),
     });
-    
+
     if (!eventUser) {
       return next(new AppError("User not registered for this event.", 404));
     }
@@ -237,9 +253,8 @@ export const loginUser = async (
       success: true,
       message: "OTP sent successfully",
       // Don't send OTP in production - only for testing
-      otp: process.env.NODE_ENV === "development" ? otp : undefined
+      otp: process.env.NODE_ENV === "development" ? otp : undefined,
     });
-
   } catch (error) {
     console.error("Login error:", error);
     next(new AppError("Failed to process login request", 500));
@@ -253,7 +268,8 @@ export const verifyOtp = async (
 ): Promise<Response | void> => {
   const { email, otp, eventId } = req.body;
 
-  if (!email || !otp || !eventId) return next(new AppError("Missing fields", 400));
+  if (!email || !otp || !eventId)
+    return next(new AppError("Missing fields", 400));
 
   const user = await UserModel.findOne({ email });
   if (!user) return next(new AppError("User not found", 404));
@@ -261,10 +277,11 @@ export const verifyOtp = async (
   // Find the EventUser for this specific event
   const eventUser = await EventUserModel.findOne({
     userId: user._id,
-    eventId: new mongoose.Types.ObjectId(eventId)
+    eventId: new mongoose.Types.ObjectId(eventId),
   });
 
-  if (!eventUser) return next(new AppError("User not registered for this event", 404));
+  if (!eventUser)
+    return next(new AppError("User not registered for this event", 404));
 
   if (
     !eventUser.otp ||
@@ -334,7 +351,9 @@ export const UserInfo = async (
   }
 
   // Get basic user info
-  const user = await UserModel.findById(userId).select('name email status emailVerified');
+  const user = await UserModel.findById(userId).select(
+    "name email status emailVerified"
+  );
   if (!user) throw new AppError("User not found", 404);
 
   // Get event-specific user data with aggregation for connections
@@ -420,8 +439,10 @@ export const UserInfo = async (
   if (!eventUserData.length) throw new AppError("Event user not found", 404);
 
   const eventUser = eventUserData[0];
-  const userLevelData = await updateUserBadge(eventUserId, eventUser.connections);
-
+  const userLevelData = await updateUserBadge(
+    eventUserId,
+    eventUser.connections
+  );
 
   return res.status(200).json({
     success: true,
@@ -443,7 +464,9 @@ export const updateUser = async (
     throw new AppError("Event context required", 400);
   }
 
-  const eventUser = await EventUserModel.findByIdAndUpdate(eventUserId, data, { new: true });
+  const eventUser = await EventUserModel.findByIdAndUpdate(eventUserId, data, {
+    new: true,
+  });
   if (!eventUser) throw new AppError("Event user not found", 404);
 
   return res.status(200).json({

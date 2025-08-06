@@ -130,6 +130,10 @@ const FormPage = () => {
 
     setIsLoading(true);
 
+    // Check if phone number contains only country code (e.g., "+91", "+1", etc.)
+    const isPhoneNumberValid = phoneNumber && phoneNumber.length > 4 && !phoneNumber.match(/^\+\d{1,3}$/);
+    const contactNumberToSend = isPhoneNumberValid ? phoneNumber : null;
+
     try {
       const response = await userApi.post("/user/create", {
         data: {
@@ -137,7 +141,7 @@ const FormPage = () => {
           email,
           linkedin,
           eventId,
-          contactNumber: phoneNumber,
+          contactNumber: contactNumberToSend,
           company: companyName,
           position: describedAs,
           instituteName,
