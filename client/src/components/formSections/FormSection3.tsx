@@ -285,7 +285,7 @@ const FormSection3 = ({
           </div>
         </div>
 
-        <div className="w-full h-[62vh] pb-4 mt-3 grid grid-cols-2 gap-2 overflow-y-scroll custom-scrollbar">
+        <div className="w-full h-[62vh] pb-28 mt-3 grid grid-cols-2 gap-2 overflow-y-scroll custom-scrollbar">
           {industries.map((industry, index) => (
             <IndustryBox
               key={index}
