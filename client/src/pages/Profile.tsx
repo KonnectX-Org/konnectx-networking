@@ -348,7 +348,7 @@ const Profile = () => {
             selectedData={interests}
             setInterests={setInterests}
             isEdited={
-              interests.filter((data) => user?.industry.includes(data))
+              interests?.filter((data) => user?.industry.includes(data))
                 .length == 3
                 ? false
                 : true
@@ -373,7 +373,7 @@ const Profile = () => {
             selectedData={lookingFor}
             setLookingFor={setLookingFor}
             isEdited={
-              lookingFor.filter((data) => user?.lookingFor.includes(data))
+              lookingFor?.filter((data) => user?.lookingFor.includes(data))
                 .length == 3
                 ? false
                 : true
@@ -701,7 +701,7 @@ const Profile = () => {
 
               <div className="w-full flex items-center  my-3 text-sm text-darkBg">
                 <p>
-                  {interests.map((label, index) => (
+                  {interests?.map((label, index) => (
                     <React.Fragment key={index}>
                       {label}
                       {index != interests.length - 1 && ", "}
@@ -725,7 +725,7 @@ const Profile = () => {
 
             <div className="w-full flex items-center space-x-2 my-3 text-sm text-darkBg">
               <p>
-                {lookingFor.map((label, index) => (
+                {lookingFor?.map((label, index) => (
                   <React.Fragment key={index}>
                     {label}
                     {index != lookingFor.length - 1 && ","}{" "}

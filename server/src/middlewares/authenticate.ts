@@ -7,6 +7,8 @@ import { Roles } from '../modules/organization/types/organizationEnums';
 interface TokenPayload {
   id: string;
   role: string;
+  eventId?: string;
+  eventUserId?: string;
 }
 
 declare global {
@@ -15,6 +17,7 @@ declare global {
       user?: any;
       admin?: JwtPayload;
       organization?: any;
+      eventUser?: any; // For event-specific user context
     }
   }
 }
@@ -37,7 +40,11 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
       return next();
     }
     else if(payload && payload.role === Roles.USER) {
-      req.user = payload
+      // For event-specific authentication, include event context
+      if (payload.eventId && payload.eventUserId) {
+        req.eventUser = payload; // Event-specific user context
+      }
+      req.user = payload; // General user context
       return next();
     }
     else {

@@ -28,6 +28,9 @@ export const getGuestOfAnEvent = async (req: Request,res: Response,next: NextFun
     console.log("position", position);
     console.log("is array", Array.isArray(position))
 
+    // Ensure industry is always an array
+    const industryArray = industry ? (Array.isArray(industry) ? industry : [industry]) : [];
+
     const filteredSelectedInterest = Array.isArray(selectedInterest)
         ? selectedInterest.filter((item: any) => item.trim() !== "")
         : [];
@@ -117,25 +120,23 @@ export const getGuestOfAnEvent = async (req: Request,res: Response,next: NextFun
 
     const knownUserIds = [...new Set(knownUserIdsArray)];
 
-    // extracting user interests
-    const user = await UserModel.aggregate([
-        {
-            $match: { _id: new mongoose.Types.ObjectId(userId) }
-        },
-        {
-            $project: {
-                _id: 0,
-                profession: 1,
-                position: 1,
-                company: 1,
-                instituteName: 1,
-                courseName: 1,
-                industry: 1,
-                lookingFor: 1
-            }
-        }
-    ]);
-    const lookingFor = user[0].lookingFor;
+    // extracting current user's event-specific data for matching
+    const currentEventUser = await EventUserModel.findOne({
+        userId: new mongoose.Types.ObjectId(userId),
+        eventId: new mongoose.Types.ObjectId(String(eventId))
+    }).select('profession position company instituteName courseName industry lookingFor');
+
+    if (!currentEventUser) {
+        throw new AppError("User not registered for this event", 404);
+    }
+
+    const lookingFor = currentEventUser.lookingFor || [];
+    const userIndustry = currentEventUser.industry || [];
+    const userProfession = currentEventUser.profession || "NA";
+    const userPosition = currentEventUser.position || "NA";
+    const userInstituteName = currentEventUser.instituteName || "NA";
+    const userCompany = currentEventUser.company || "NA";
+    const userCourseName = currentEventUser.courseName || "NA";
 
     // extracting all unknown users(Preparing by adding new fields in each user )
     const eventGuests = await EventUserModel.aggregate([
@@ -149,36 +150,47 @@ export const getGuestOfAnEvent = async (req: Request,res: Response,next: NextFun
                 from: "users",
                 foreignField: "_id",
                 localField: "userId",
-                as: "users"
+                as: "userBasicInfo"
             }
         },
         {
             $addFields: {
-                users: {
-                    $map: {
-                        input: "$users",
-                        as: "user",
-                        in: {                    // in ka matlab hai ki is format me map / convert kar dena 
-                            _id: "$$user._id",
-                            name: "$$user.name",
-                            interests: "$$user.interests",
-                            profileImage: "$$user.profileImage",
-                            profession: "$$user.profession",
-                            position: "$$user.position",
-                            company: "$$user.company",
-                            industry: "$$user.industry",
-                            instituteName: "$$user.instituteName",
-                            courseName: "$$user.courseName",
-                            lookingFor: "$$user.lookingFor",
-                            createdAt: "$$user.createdAt",
+                // Map EventUser data with basic user info
+                userData: {
+                    $mergeObjects: [
+                        {
+                            _id: "$userId",
+                            name: { $arrayElemAt: ["$userBasicInfo.name", 0] },
+                            email: { $arrayElemAt: ["$userBasicInfo.email", 0] },
+                            // Event-specific profile data from EventUser
+                            interests: "$interests",
+                            profileImage: "$profileImage",
+                            profession: "$profession",
+                            position: "$position",
+                            company: "$company",
+                            industry: "$industry",
+                            instituteName: "$instituteName",
+                            courseName: "$courseName",
+                            lookingFor: "$lookingFor",
+                            createdAt: "$createdAt"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            $addFields: {
+                userData: {
+                    $mergeObjects: [
+                        "$userData",
+                        {
                             lookingForMatchedCount: {
                                 $size: {
-                                    // $setIntersection: ["$$user.interests", lookingFor]
-                                    $setIntersection: [    //Fir uska intersection nikaala logged-in user ke lookingFor se(2)
+                                    $setIntersection: [
                                         {
-                                            $setUnion: [   // Har attendie ke profession + position ko ek array me le liya (1)
-                                                { $ifNull: [{ $split: ["$$user.profession", ","] }, []] },
-                                                { $ifNull: [{ $split: ["$$user.position", ","] }, []] }
+                                            $setUnion: [
+                                                { $ifNull: [{ $split: ["$profession", ","] }, []] },
+                                                { $ifNull: [{ $split: ["$position", ","] }, []] }
                                             ]
                                         },
                                         lookingFor
@@ -187,49 +199,49 @@ export const getGuestOfAnEvent = async (req: Request,res: Response,next: NextFun
                             },
                             industryMatchCount: {
                                 $size: {
-                                    $setIntersection: ["$$user.industry", user[0].industry ?? []]
+                                    $setIntersection: [
+                                        { $ifNull: ["$industry", []] },
+                                        userIndustry
+                                    ]
                                 }
                             },
                             professionMatchCount: {
                                 $cond: {
-                                    if: { $eq: ["$$user.profession", user[0].profession ?? "NA"] },
+                                    if: { $eq: ["$profession", userProfession] },
                                     then: 1,
                                     else: 0
                                 }
                             },
                             positionMatchCount: {
                                 $cond: {
-                                    if: { $eq: ["$$user.position", user[0].position ?? "NA"] },
+                                    if: { $eq: ["$position", userPosition] },
                                     then: 1,
                                     else: 0
                                 }
                             },
                             instituteNameMatchCount: {
                                 $cond: {
-                                    if: { $eq: ["$$user.instituteName", user[0].instituteName ?? "NA"] },
+                                    if: { $eq: ["$instituteName", userInstituteName] },
                                     then: 1,
                                     else: 0
                                 }
                             },
                             companyNameMatchCount: {
                                 $cond: {
-                                    if: { $eq: ["$$user.company", user[0].company ?? "NA"] },
+                                    if: { $eq: ["$company", userCompany] },
                                     then: 1,
                                     else: 0
                                 }
                             },
                             courseNameMatchCount: {
                                 $cond: {
-                                    if: { $eq: ["$$user.courseName", user[0].courseName ?? "NA"] },
+                                    if: { $eq: ["$courseName", userCourseName] },
                                     then: 1,
                                     else: 0
                                 }
                             },
-                            isNameMatch: name ? { $regexMatch: { input: "$$user.name", regex: name, options: "i" } } : true,
-                            isProfessionMatch: profession ? { $regexMatch: { input: "$$user.profession", regex: profession, options: "i" } } : true,
-                            // isPositionMatch: position ? { $regexMatch: { input: "$$user.position", regex: position, options: "i" } } : true,
-                            // isIndustryMatch: industry ? { $regexMatch: { input: "$$user.industry", regex: industry, options: "i" } } : true,
-
+                            isNameMatch: name ? { $regexMatch: { input: { $arrayElemAt: ["$userBasicInfo.name", 0] }, regex: name, options: "i" } } : true,
+                            isProfessionMatch: profession ? { $regexMatch: { input: "$profession", regex: profession, options: "i" } } : true,
                             isPositionMatch: position?.length ? {
                                 $gte: [
                                     {
@@ -237,29 +249,99 @@ export const getGuestOfAnEvent = async (req: Request,res: Response,next: NextFun
                                             $setIntersection: [
                                                 {
                                                     $setUnion: [
-                                                        { $ifNull: [{ $split: ["$$user.position", ","] }, []] }
+                                                        { $ifNull: [{ $split: ["$position", ","] }, []] }
                                                     ]
                                                 },
-                                                position // Directly passing the position array
+                                                position
                                             ]
                                         }
                                     },
-                                    1 // Ensuring at least one common element exists
+                                    1
                                 ]
                             } : true,
-                            isIndustryMatch: industry ? {
+                            isIndustryMatch: industryArray.length > 0 ? {
                                 $gte: [
                                     {
                                         $size: {
-                                            $setIntersection: ["$$user.industry", industry]
+                                            $setIntersection: [
+                                                { $ifNull: ["$industry", []] },
+                                                industryArray
+                                            ]
                                         }
                                     },
                                     1
                                 ]
                             } : true
                         }
-                    }
+                    ]
                 }
+            }
+        },
+        {
+            $addFields: {
+                userData: {
+                    $mergeObjects: [
+                        "$userData",
+                        {
+                            totalMatchCount: {
+                                $add: [
+                                    { $ifNull: ["$userData.professionMatchCount", 0] },
+                                    { $ifNull: ["$userData.positionMatchCount", 0] },
+                                    { $ifNull: ["$userData.instituteNameMatchCount", 0] },
+                                    { $ifNull: ["$userData.companyNameMatchCount", 0] },
+                                    { $ifNull: ["$userData.courseNameMatchCount", 0] },
+                                    { $ifNull: ["$userData.industryMatchCount", 0] },
+                                ]
+                            },
+                            lookingForMatchedCountWithBonus: {
+                                $cond: {
+                                    if: { $gt: ["$userData.lookingForMatchedCount", 0] },
+                                    then: { $add: ["$userData.lookingForMatchedCount", 10] },
+                                    else: "$userData.lookingForMatchedCount"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            $match: {
+                $and: [
+                    { userId: { $ne: new mongoose.Types.ObjectId(userId) } },
+                    { userId: { $not: { $in: knownUserIds } } },
+                    {
+                        $expr: {
+                            $cond: {
+                                if: { $gt: [selectedInterestLength, 0] },
+                                then: {
+                                    $gt: [
+                                        { $size: { $setIntersection: ["$lookingFor", selectedInterest] } },
+                                        0
+                                    ]
+                                },
+                                else: true
+                            }
+                        }
+                    },
+                    { $expr: { $eq: ["$userData.isNameMatch", true] } },
+                    { $expr: { $eq: ["$userData.isProfessionMatch", true] } },
+                    { $expr: { $eq: ["$userData.isPositionMatch", true] } },
+                    { $expr: { $eq: ["$userData.isIndustryMatch", true] } },
+                ]
+            }
+        },
+        {
+            $sort: {
+                "userData.lookingForMatchedCountWithBonus": -1,
+                "userData.totalMatchCount": -1,
+                "createdAt": sortOrder === 'asc' ? 1 : -1
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                users: { $push: "$$ROOT" }
             }
         },
         {
@@ -270,90 +352,9 @@ export const getGuestOfAnEvent = async (req: Request,res: Response,next: NextFun
                         as: "user",
                         in: {
                             $mergeObjects: [
-                                "$$user", // pehle se bana hua user object
-                                {
-                                    totalMatchCount: {
-                                        $add: [   // add means (+ , math addition)
-                                            // { $ifNull: ["$$user.lookingForMatchedCount", 0] },
-                                            { $ifNull: ["$$user.professionMatchCount", 0] },
-                                            { $ifNull: ["$$user.positionMatchCount", 0] },
-                                            { $ifNull: ["$$user.instituteNameMatchCount", 0] },
-                                            { $ifNull: ["$$user.companyNameMatchCount", 0] },
-                                            { $ifNull: ["$$user.courseNameMatchCount", 0] },
-                                            { $ifNull: ["$$user.industryMatchCount", 0] },
-                                        ]
-                                    },
-                                    lookingForMatchedCountWithBonus: {
-                                        $cond: {
-                                            if: { $gt: ["$$user.lookingForMatchedCount", 0] },
-                                            then: { $add: ["$$user.lookingForMatchedCount", 10] },
-                                            else: "$$user.lookingForMatchedCount"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        {
-            $addFields: {   // this ppeline is for filtering that users
-                users: {
-                    $filter: {
-                        input: "$users",
-                        as: "user",
-                        cond: {
-                            $and: [
-                                { $ne: ["$$user._id", new mongoose.Types.ObjectId(userId)] },
-                                { $not: { $in: ["$$user._id", knownUserIds] } },
-                                {
-                                    $cond: {
-                                        if: { $gt: [selectedInterestLength, 0] },
-                                        then: {
-                                            $gt: [
-                                                { $size: { $setIntersection: ["$$user.lookingFor", selectedInterest] } },
-                                                0
-                                            ]
-                                        },
-                                        else: true
-                                    }
-                                },
-                                { $eq: ["$$user.isNameMatch", true] },
-                                { $eq: ["$$user.isProfessionMatch", true] },
-                                { $eq: ["$$user.isPositionMatch", true] },
-                                { $eq: ["$$user.isIndustryMatch", true] },
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        {
-            $addFields: {  // for sorting
-                users: {
-                    $sortArray: {
-                        input: "$users",
-                        sortBy: {
-                            "lookingForMatchedCountWithBonus": -1,
-                            "totalMatchCount": -1,
-                            "createdAt": sortOrder === 'asc' ? 1 : -1
-                        }
-                    }
-                }
-            }
-        },
-        {
-            $addFields: {  // har ek user ke sath ek match index daalne ke liye 
-                users: {
-                    $map: {
-                        input: "$users",
-                        as: "user",
-                        in: {
-                            $mergeObjects: [
                                 "$$user",
                                 {
-                                    matchIndex: { $add: [1, { $indexOfArray: ["$users._id", "$$user._id"] }] }
+                                    matchIndex: { $add: [1, { $indexOfArray: ["$users", "$$user"] }] }
                                 }
                             ]
                         }
@@ -374,13 +375,10 @@ export const getGuestOfAnEvent = async (req: Request,res: Response,next: NextFun
         {
             $limit: parseInt(String(limit))
         },
-        // {
-        //     $sample: { size: parseInt(String(limit)) }
-        // },
         {
             $project: {
-                _id: "$users._id",
-                name: "$users.name",
+                _id: "$users.userData._id",
+                name: "$users.userData.name",
                 industry: "$users.industry",
                 interests: "$users.interests",
                 profileImage: "$users.profileImage",
@@ -390,7 +388,7 @@ export const getGuestOfAnEvent = async (req: Request,res: Response,next: NextFun
                 instituteName: "$users.instituteName",
                 courseName: "$users.courseName",
                 lookingFor: "$users.lookingFor",
-                matchCount: "$users.totalMatchCount",
+                matchCount: "$users.userData.totalMatchCount",
                 matchIndex: "$users.matchIndex"
             }
         }
@@ -586,6 +584,9 @@ export const searchGuestInEvents = async (
     if (!eventId)
         throw new AppError("Query(eventId) not found", 400);
 
+    // Ensure industry is always an array
+    const industryArray = industry ? (Array.isArray(industry) ? industry : [industry]) : [];
+
     const filteredSelectedInterest = Array.isArray(selectedInterest)
         ? selectedInterest.filter((item: any) => item.trim() !== "")
         : [];
@@ -630,16 +631,18 @@ export const searchGuestInEvents = async (
     ]);
     const knownUserIds = (data && data[0]?.otherUserIds) ?? [];
 
-    // extracting user interests
-    const user = await UserModel.aggregate([
-        {
-            $project: {
-                _id: 0,
-                lookingFor: 1
-            }
-        }
-    ]);
-    const lookingFor = user[0].lookingFor;
+    // extracting current user's event-specific data for matching
+    const currentEventUser = await EventUserModel.findOne({
+        userId: new mongoose.Types.ObjectId(userId),
+        eventId: new mongoose.Types.ObjectId(String(eventId))
+    }).select('lookingFor industry');
+
+    if (!currentEventUser) {
+        throw new AppError("User not registered for this event", 404);
+    }
+
+    const lookingFor = currentEventUser.lookingFor || [];
+    const userIndustry = currentEventUser.industry || [];
 
     // extracting all users
     const eventGuests = await EventUserModel.aggregate([
@@ -653,38 +656,50 @@ export const searchGuestInEvents = async (
                 from: "users",
                 foreignField: "_id",
                 localField: "userId",
-                as: "users"
+                as: "userBasicInfo"
             }
         },
         {
             $addFields: {
-                users: {
-                    $map: {
-                        input: "$users",
-                        as: "user",
-                        in: {
-                            _id: "$$user._id",
-                            name: "$$user.name",
-                            interests: "$$user.interests",
-                            profileImage: "$$user.profileImage",
-                            profession: "$$user.profession",
-                            position: "$$user.position",
-                            company: "$$user.company",
-                            industry: "$$user.industry",
-                            instituteName: "$$user.instituteName",
-                            courseName: "$$user.courseName",
-                            lookingFor: "$$user.lookingFor",
-                            createdAt: "$$user.createdAt",
+                // Map EventUser data with basic user info
+                userData: {
+                    $mergeObjects: [
+                        {
+                            _id: "$userId",
+                            name: { $arrayElemAt: ["$userBasicInfo.name", 0] },
+                            email: { $arrayElemAt: ["$userBasicInfo.email", 0] },
+                            // Event-specific profile data from EventUser
+                            interests: "$interests",
+                            profileImage: "$profileImage",
+                            profession: "$profession",
+                            position: "$position",
+                            company: "$company",
+                            industry: "$industry",
+                            instituteName: "$instituteName",
+                            courseName: "$courseName",
+                            lookingFor: "$lookingFor",
+                            createdAt: "$createdAt"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            $addFields: {
+                userData: {
+                    $mergeObjects: [
+                        "$userData",
+                        {
                             isConnected: {
-                                $in: ["$$user._id", knownUserIds]
+                                $in: ["$userId", knownUserIds]
                             },
                             lookingForMatchedCount: {
                                 $size: {
                                     $setIntersection: [
                                         {
                                             $setUnion: [
-                                                { $ifNull: [{ $split: ["$$user.profession", ","] }, []] },
-                                                { $ifNull: [{ $split: ["$$user.position", ","] }, []] }
+                                                { $ifNull: [{ $split: ["$profession", ","] }, []] },
+                                                { $ifNull: [{ $split: ["$position", ","] }, []] }
                                             ]
                                         },
                                         lookingFor
@@ -693,165 +708,62 @@ export const searchGuestInEvents = async (
                             },
                             industryMatchCount: {
                                 $size: {
-                                    $setIntersection: ["$$user.industry", user[0].industry ?? []]
+                                    $setIntersection: [
+                                        { $ifNull: ["$industry", []] },
+                                        userIndustry
+                                    ]
                                 }
                             },
-                            professionMatchCount: {
-                                $cond: {
-                                    if: { $eq: ["$$user.profession", user[0].profession ?? "NA"] },
-                                    then: 1,
-                                    else: 0
-                                }
-                            },
-                            positionMatchCount: {
-                                $cond: {
-                                    if: { $eq: ["$$user.position", user[0].position ?? "NA"] },
-                                    then: 1,
-                                    else: 0
-                                }
-                            },
-                            instituteNameMatchCount: {
-                                $cond: {
-                                    if: { $eq: ["$$user.instituteName", user[0].instituteName ?? "NA"] },
-                                    then: 1,
-                                    else: 0
-                                }
-                            },
-                            companyNameMatchCount: {
-                                $cond: {
-                                    if: { $eq: ["$$user.company", user[0].company ?? "NA"] },
-                                    then: 1,
-                                    else: 0
-                                }
-                            },
-                            courseNameMatchCount: {
-                                $cond: {
-                                    if: { $eq: ["$$user.courseName", user[0].courseName ?? "NA"] },
-                                    then: 1,
-                                    else: 0
-                                }
-                            },
-
                             isAnyMatch: name ? {
                                 $or: [
-                                    { $regexMatch: { input: "$$user.name", regex: name, options: "i" } },
-                                    { $regexMatch: { input: "$$user.profession", regex: name, options: "i" } },
-                                    { $regexMatch: { input: "$$user.position", regex: name, options: "i" } },
-                                    { $regexMatch: { input: "$$user.instituteName", regex: name, options: "i" } },
-                                    { $regexMatch: { input: "$$user.company", regex: name, options: "i" } },
-                                    { $regexMatch: { input: "$$user.courseName", regex: name, options: "i" } },
-                                    // { $regexMatch: { input: "$$user.industry", regex: name, options: "i" } },
-                                    // { 
-                                    //     $in: [{ $map: {
-                                    //         input: "$$user.industry", 
-                                    //         as: "industry", 
-                                    //         in: { $regexMatch: { input: { $toString: "$$industry" }, regex: name, options: "i" } }
-                                    //     }}, [true]]
-                                    // }
+                                    { $regexMatch: { input: { $arrayElemAt: ["$userBasicInfo.name", 0] }, regex: name, options: "i" } },
+                                    { $regexMatch: { input: "$profession", regex: name, options: "i" } },
+                                    { $regexMatch: { input: "$position", regex: name, options: "i" } },
+                                    { $regexMatch: { input: "$instituteName", regex: name, options: "i" } },
+                                    { $regexMatch: { input: "$company", regex: name, options: "i" } },
+                                    { $regexMatch: { input: "$courseName", regex: name, options: "i" } },
                                 ]
-                            } : true,
-
-                            // isNameMatch: name ? { $regexMatch: { input: "$$user.name", regex: name, options: "i" } } : true,
-                            // isProfessionMatch: profession ? { $regexMatch: { input: "$$user.profession", regex: profession, options: "i" } } : true,
-                            // isPositionMatch: position ? { $regexMatch: { input: "$$user.position", regex: position, options: "i" } } : true,
-                            // // isIndustryMatch: industry ? { $regexMatch: { input: "$$user.industry", regex: industry, options: "i" } } : true,
-                            // isIndustryMatch: industry ? {
-                            //     $gte: [
-                            //         {
-                            //             $size: {
-                            //                 $setIntersection: ["$$user.industry", industry]
-                            //             }
-                            //         },
-                            //         1
-                            //     ]
-                            // } : true
+                            } : true
                         }
-                    }
+                    ]
                 }
             }
         },
         {
             $addFields: {
-                users: {
-                    $map: {
-                        input: "$users",
-                        as: "user",
-                        in: {
-                            $mergeObjects: [
-                                "$$user",
-                                {
-                                    totalMatchCount: {
-                                        $add: [
-                                            { $ifNull: ["$$user.lookingForMatchedCount", 0] },
-                                            { $ifNull: ["$$user.professionMatchCount", 0] },
-                                            { $ifNull: ["$$user.positionMatchCount", 0] },
-                                            { $ifNull: ["$$user.instituteNameMatchCount", 0] },
-                                            { $ifNull: ["$$user.companyNameMatchCount", 0] },
-                                            { $ifNull: ["$$user.courseNameMatchCount", 0] },
-                                            { $ifNull: ["$$user.industryMatchCount", 0] },
-                                        ]
-                                    }
-                                }
-                            ]
+                userData: {
+                    $mergeObjects: [
+                        "$userData",
+                        {
+                            totalMatchCount: {
+                                $add: [
+                                    { $ifNull: ["$userData.lookingForMatchedCount", 0] },
+                                    { $ifNull: ["$userData.industryMatchCount", 0] },
+                                ]
+                            }
                         }
-                    }
+                    ]
                 }
             }
         },
         {
-            $addFields: {
-                users: {
-                    $filter: {
-                        input: "$users",
-                        as: "user",
-                        cond: {
-                            $and: [
-                                { $ne: ["$$user._id", new mongoose.Types.ObjectId(userId)] },
-                                // { $not: { $in: ["$$user._id", knownUserIds] } },
-                                // {
-                                //     $cond: {
-                                //         if: { $gt: [selectedInterestLength, 0] },
-                                //         then: {
-                                //             $gt: [
-                                //                 { $size: { $setIntersection: ["$$user.interests", selectedInterest] } },
-                                //                 0
-                                //             ]
-                                //         },
-                                //         else: true
-                                //     }
-                                // },
-
-                                { $eq: ["$$user.isAnyMatch", true] },
-                                // { $eq: ["$$user.isNameMatch", true] },
-                                // { $eq: ["$$user.isProfessionMatch", true] },
-                                // { $eq: ["$$user.isPositionMatch", true] },
-                                // { $eq: ["$$user.isIndustryMatch", true] },
-                            ]
-                        }
-                    }
-                }
+            $match: {
+                $and: [
+                    { userId: { $ne: new mongoose.Types.ObjectId(userId) } },
+                    { $expr: { $eq: ["$userData.isAnyMatch", true] } },
+                ]
             }
         },
         {
-            $addFields: {
-                users: {
-                    $sortArray: {
-                        input: "$users",
-                        sortBy: {
-                            "totalMatchCount": -1,
-                            "createdAt": sortOrder === 'asc' ? 1 : -1
-                        }
-                    }
-                }
+            $sort: {
+                "userData.totalMatchCount": -1,
+                "createdAt": sortOrder === 'asc' ? 1 : -1
             }
-        },
-        {
-            $unwind: "$users"
         },
         ...(cursor ? [
             {
                 $match: {
-                    "users._id": { $gt: new mongoose.Types.ObjectId(String(cursor)) }
+                    "userId": { $gt: new mongoose.Types.ObjectId(String(cursor)) }
                 }
             }
         ] : []),
@@ -860,19 +772,19 @@ export const searchGuestInEvents = async (
         },
         {
             $project: {
-                _id: "$users._id",
-                name: "$users.name",
-                industry: "$users.industry",
-                interests: "$users.interests",
-                profileImage: "$users.profileImage",
-                profession: "$users.profession",
-                position: "$users.position",
-                company: "$users.company",
-                instituteName: "$users.instituteName",
-                courseName: "$users.courseName",
-                lookingFor: "$users.lookingFor",
-                matchCount: "$users.lookingForMatchedCount",
-                isConnected: "$users.isConnected"
+                _id: "$userData._id",
+                name: "$userData.name",
+                industry: "$industry",
+                interests: "$interests",
+                profileImage: "$profileImage",
+                profession: "$profession",
+                position: "$position",
+                company: "$company",
+                instituteName: "$instituteName",
+                courseName: "$courseName",
+                lookingFor: "$lookingFor",
+                matchCount: "$userData.lookingForMatchedCount",
+                isConnected: "$userData.isConnected"
             }
         }
     ]);

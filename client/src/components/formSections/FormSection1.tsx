@@ -36,26 +36,17 @@ const FormSection1 = ({
     // Function to validate email
     const validateEmail = (email: string) => emailRegex.test(email);
 
-    // Function to validate phone number (for Indian numbers without country code)
-    const validatePhone = (phone: string) => {
-      // Remove country code if present and validate 10 digits
-      const cleanPhone = phone.replace(/^\+91\s?/, "").replace(/\D/g, "");
-      return cleanPhone.length === 10;
-    };
-
     // Function to validate LinkedIn URL (optional)
     const validateLinkedIn = (url: string) => {
       if (!url) return true; // Optional field
-      const linkedinRegex = /^https?:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9-]+\/?$/;
+      const linkedinRegex =
+        /^https?:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9-]+\/?$/;
       return linkedinRegex.test(url);
     };
 
-    if (name && email && number) {
+    if (name && email) {
       if (!validateEmail(email)) {
         showSnackbar("Enter a valid email", "warning");
-        return;
-      } else if (!validatePhone(number)) {
-        showSnackbar("Enter a valid phone number", "warning");
         return;
       } else if (!validateLinkedIn(linkedin)) {
         showSnackbar("Enter a valid LinkedIn URL", "warning");
@@ -64,7 +55,10 @@ const FormSection1 = ({
 
       nextForm();
     } else {
-      showSnackbar("Please fill the details", "warning");
+      showSnackbar(
+        "Please fill the mandatory details (Name and Email)",
+        "warning"
+      );
     }
   };
 
@@ -122,7 +116,7 @@ const FormSection1 = ({
           {/* Phone Number Input */}
           <div className="w-full">
             <label className="block text-sm font-medium text-darkBg mb-2">
-              Phone Number
+              Phone Number (Optional)
             </label>
             <PhoneInput
               defaultCountry="in"
@@ -174,7 +168,7 @@ const FormSection1 = ({
             validAndGoToNext();
           }}
           className={`bg-darkBg mt-4 font-bold text-white py-4 rounded-md w-full text-xs ${
-            name && email && number ? "opacity-100" : "opacity-60"
+            name && email ? "opacity-100" : "opacity-60"
           }`}
         >
           I am ready to start!

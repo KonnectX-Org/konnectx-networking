@@ -14,35 +14,35 @@ import { RequestStatusEnum } from "../../friendManagement/types/friendManagement
 import { getBadgeInfo } from "../../../utils/badgeLevels";
 import { sendLoginOtp } from "../../../services/emails/triggers/auth/loginUserOtp";
 
-// This is a functio used in UserInfo API
-const updateUserBadge = async (userId: string, connections: number) => {
-  const user = await UserModel.findById(
-    new mongoose.Types.ObjectId(userId)
+// This function is used in UserInfo API - now works with EventUser
+const updateUserBadge = async (eventUserId: string, connections: number) => {
+  const eventUser = await EventUserModel.findById(
+    new mongoose.Types.ObjectId(eventUserId)
   ).select("previousBadgeName badgeSplashRead");
 
-  if (!user) return {};
-  const previousBadgeName = user.previousBadgeName;
+  if (!eventUser) return {};
+  const previousBadgeName = eventUser.previousBadgeName;
   const badgeInfo = getBadgeInfo(connections);
 
   if (!badgeInfo) {
-    return "Unable to determine badege";
+    return "Unable to determine badge";
   }
 
   const { badgeName, level, subText } = badgeInfo;
 
   if (previousBadgeName !== null && previousBadgeName !== badgeName) {
-    user.badgeSplashRead = false;
+    eventUser.badgeSplashRead = false;
   }
 
-  user.previousBadgeName = badgeName;
+  eventUser.previousBadgeName = badgeName;
 
-  const updatedUserData = await user.save();
+  const updatedEventUserData = await eventUser.save();
 
   return {
     badgeName,
     level,
     subText,
-    badgeSplashRead: updatedUserData.badgeSplashRead,
+    badgeSplashRead: updatedEventUserData.badgeSplashRead,
   };
 };
 
@@ -67,12 +67,15 @@ export const createUser = async (
   const session = await mongoose.startSession();
   session.startTransaction();
 
-  data.profileImage = `https://api.dicebear.com/5.x/initials/svg?seed=${data.name.replace(/ /g, "_")}`;
-
+  // Create or find the basic user identity
   let user = await UserModel.findOne({ email: data.email });
 
   if (!user) {
-    const [createdUser] = await UserModel.create([{ ...data }], { session });
+    const [createdUser] = await UserModel.create([{ 
+      name: data.name,
+      email: data.email,
+      // Only basic identity fields
+    }], { session });
     if (!createdUser) throw new AppError("Failed to create user", 500);
     user = createdUser;
   }
@@ -86,19 +89,35 @@ export const createUser = async (
     throw new AppError("User already registered for this event", 400);
   }
 
-  await EventUserModel.create(
+  // Create event-specific user with all profile data
+  const profileImage = `https://api.dicebear.com/5.x/initials/svg?seed=${data.name.replace(/ /g, "_")}`;
+
+  const [eventUser] = await EventUserModel.create(
     [
       {
         userId: user._id,
         eventId: data.eventId,
-        // role: data.role,
-        // industry: data.industry, // Temporarily commented out
-        industry: 5,
+        contactNumber: data.contactNumber,
+        profileImage: profileImage,
+        profession: data.profession,
+        position: data.position,
+        industry: Array.isArray(data.industry) ? data.industry : (data.industry ? [data.industry] : []),
+        help: data.help || [],
+        company: data.company,
+        instituteName: data.instituteName,
+        courseName: data.courseName,
+        lookingFor: data.lookingFor || [],
+        interests: data.interests || [],
+        profileBio: data.profileBio,
+        socialLinks: data.socialLinks || [],
+        services: data.services || [],
         lookingToConnectWith: data.lookingToConnectWith || [],
       },
     ],
     { session }
   );
+
+  if (!eventUser) throw new AppError("Failed to create event user", 500);
 
   await session.commitTransaction();
   session.endSession();
@@ -106,14 +125,19 @@ export const createUser = async (
   const accessToken = generateAccessToken({
     id: String(user._id),
     role: Roles.USER,
+    eventId: data.eventId,
+    eventUserId: String(eventUser._id),
   });
 
   const refreshToken = generateRefreshToken({
     id: String(user._id),
     role: Roles.USER,
+    eventId: data.eventId,
+    eventUserId: String(eventUser._id),
   });
 
-  await UserModel.findByIdAndUpdate(user._id, { refreshToken });
+  // Store refresh token in EventUser
+  await EventUserModel.findByIdAndUpdate(eventUser._id, { refreshToken });
 
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
@@ -132,6 +156,7 @@ export const createUser = async (
   return res.status(200).json({
     success: true,
     user,
+    eventUser,
   });
 };
 
@@ -142,6 +167,15 @@ export const checkUserEventRegistration = async (
 ) => {
   const { eventId } = req.params;
   const userId = req.user.id;
+
+  // If we have event context from token, verify it matches the requested event
+  if (req.eventUser && req.eventUser.eventId !== eventId) {
+    return res.status(200).json({
+      success: true,
+      registered: false,
+      message: "User authenticated for different event"
+    });
+  }
 
   const isRegistered = await EventUserModel.findOne({
     userId: new mongoose.Types.ObjectId(userId),
@@ -160,27 +194,37 @@ export const loginUser = async (
   next: NextFunction
 ) => {
   try {
-    const { email } = req.body;
+    const { email, eventId } = req.body;
     
     // Validate input
-    if (!email) {
-      return next(new AppError("Email is required", 400));
+    if (!email || !eventId) {
+      return next(new AppError("Email and eventId are required", 400));
     }
 
-    // Check user existence
+    // Check if user exists
     const user = await UserModel.findOne({ email });
     if (!user) {
       return next(new AppError("User not found. Please register first.", 404));
+    }
+
+    // Check if user is registered for this event
+    const eventUser = await EventUserModel.findOne({ 
+      userId: user._id, 
+      eventId: new mongoose.Types.ObjectId(eventId) 
+    });
+    
+    if (!eventUser) {
+      return next(new AppError("User not registered for this event.", 404));
     }
 
     // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     console.log("OTP for debugging:", otp); // Remove in production
 
-    // Save OTP with expiry
-    user.otp = otp;
-    user.otpExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
-    await user.save();
+    // Save OTP with expiry in EventUser (event-specific)
+    eventUser.otp = otp;
+    eventUser.otpExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes expiry
+    await eventUser.save();
 
     // Send OTP email
     await sendLoginOtp({
@@ -207,37 +251,51 @@ export const verifyOtp = async (
   res: Response,
   next: NextFunction
 ): Promise<Response | void> => {
-  const { email, otp } = req.body;
+  const { email, otp, eventId } = req.body;
 
-  if (!email || !otp) return next(new AppError("Missing fields", 400));
+  if (!email || !otp || !eventId) return next(new AppError("Missing fields", 400));
 
   const user = await UserModel.findOne({ email });
   if (!user) return next(new AppError("User not found", 404));
 
+  // Find the EventUser for this specific event
+  const eventUser = await EventUserModel.findOne({
+    userId: user._id,
+    eventId: new mongoose.Types.ObjectId(eventId)
+  });
+
+  if (!eventUser) return next(new AppError("User not registered for this event", 404));
+
   if (
-    !user.otp ||
-    !user.otpExpiry ||
-    user.otp !== otp ||
-    user.otpExpiry < new Date()
+    !eventUser.otp ||
+    !eventUser.otpExpiry ||
+    eventUser.otp !== otp ||
+    eventUser.otpExpiry < new Date()
   ) {
     return next(new AppError("Invalid or expired OTP", 400));
   }
 
-  user.otp = null;
-  user.otpExpiry = null;
-  await user.save();
+  // Clear OTP from EventUser
+  eventUser.otp = null;
+  eventUser.otpExpiry = null;
+  await eventUser.save();
 
   const accessToken = generateAccessToken({
     id: String(user._id),
     role: Roles.USER,
+    eventId: eventId,
+    eventUserId: String(eventUser._id),
   });
 
   const refreshToken = generateRefreshToken({
     id: String(user._id),
     role: Roles.USER,
+    eventId: eventId,
+    eventUserId: String(eventUser._id),
   });
 
-  await UserModel.findByIdAndUpdate(user._id, { refreshToken });
+  // Store refresh token in EventUser
+  await EventUserModel.findByIdAndUpdate(eventUser._id, { refreshToken });
 
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
@@ -256,6 +314,7 @@ export const verifyOtp = async (
   return res.status(200).json({
     success: true,
     user,
+    eventUser, // Include event-specific user data
   });
 };
 
@@ -265,17 +324,28 @@ export const UserInfo = async (
   next: NextFunction
 ): Promise<Response | void> => {
   const userId = req.user.id;
+  const eventUserId = req.eventUser?.id;
+  const eventId = req.eventUser?.tokenEventId;
 
-  console.log("userId", userId);
+  console.log("userId", userId, "eventUserId", eventUserId, "eventId", eventId);
 
-  const user = await UserModel.aggregate([
+  if (!eventUserId || !eventId) {
+    throw new AppError("Event context required", 400);
+  }
+
+  // Get basic user info
+  const user = await UserModel.findById(userId).select('name email status emailVerified');
+  if (!user) throw new AppError("User not found", 404);
+
+  // Get event-specific user data with aggregation for connections
+  const eventUserData = await EventUserModel.aggregate([
     {
-      $match: { _id: new mongoose.Types.ObjectId(userId) },
+      $match: { _id: new mongoose.Types.ObjectId(eventUserId) },
     },
     {
       $lookup: {
         from: "friendrequests",
-        localField: "_id",
+        localField: "userId",
         foreignField: "sender",
         as: "requestSentUser",
       },
@@ -296,7 +366,7 @@ export const UserInfo = async (
     {
       $lookup: {
         from: "friendrequests",
-        localField: "_id",
+        localField: "userId",
         foreignField: "receiver",
         as: "requestReceivedUser",
       },
@@ -345,42 +415,18 @@ export const UserInfo = async (
         },
       },
     },
-    {
-      $project: {
-        _id: 1,
-        requestSent: 1,
-        requestReceived: 1,
-        connections: 1,
-        name: 1,
-        email: 1,
-        contactNumber: 1,
-        profileImage: 1,
-        profession: 1,
-        position: 1,
-        industry: 1,
-        company: 1,
-        instituteName: 1,
-        services: 1,
-        courseName: 1,
-        lookingFor: 1,
-        interests: 1,
-        status: 1,
-        socialLinks: 1,
-        previousBadgeName: 1,
-      },
-    },
   ]);
 
-  if (!user.length) throw new AppError("User not found", 404);
+  if (!eventUserData.length) throw new AppError("Event user not found", 404);
 
-  // const userLevelData = getBadgeInfo(user[0]?.connections);
-  const userLevelData = await updateUserBadge(userId, user[0]?.connections);
+  const eventUser = eventUserData[0];
+  const userLevelData = await updateUserBadge(eventUserId, eventUser.connections);
 
-  console.log("userLevelData", userLevelData);
 
   return res.status(200).json({
     success: true,
-    user: user[0],
+    user: user,
+    eventUser: eventUser,
     userLevelData,
   });
 };
@@ -391,50 +437,58 @@ export const updateUser = async (
   next: NextFunction
 ): Promise<Response | void> => {
   const { data } = req.body;
-  const userId = req.user.id;
+  const eventUserId = req.eventUser?.id;
 
-  const user = await UserModel.findByIdAndUpdate(userId, data, { new: true });
-  if (!user) throw new AppError("User not found", 404);
+  if (!eventUserId) {
+    throw new AppError("Event context required", 400);
+  }
+
+  const eventUser = await EventUserModel.findByIdAndUpdate(eventUserId, data, { new: true });
+  if (!eventUser) throw new AppError("Event user not found", 404);
 
   return res.status(200).json({
     success: true,
-    message: "user profile updated",
-    user,
+    message: "event user profile updated",
+    eventUser,
   });
 };
 
-// replace interest to industry
+// replace interest to industry (now event-specific)
 export const updateInterest = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<Response | void> => {
-  const userId = req.user.id;
+  const eventUserId = req.eventUser?.id;
   const { data } = req.body;
+
+  if (!eventUserId) {
+    throw new AppError("Event context required", 400);
+  }
 
   if (!data.interestsToRemove.length && !data.newInterests.length)
     throw new AppError("Field not found", 400);
 
   if (data.interestsToRemove.length) {
-    const removedInterest = await UserModel.findByIdAndUpdate(
-      new mongoose.Types.ObjectId(userId),
+    await EventUserModel.findByIdAndUpdate(
+      new mongoose.Types.ObjectId(eventUserId),
       {
-        $pull: { industry: { $in: data.interestsToRemove } },
+        $pull: { interests: { $in: data.interestsToRemove } },
       },
       { new: true }
     );
   }
 
   if (data.newInterests.length) {
-    const updatedInterest = await UserModel.findByIdAndUpdate(
-      new mongoose.Types.ObjectId(userId),
-      { $push: { industry: { $each: data.newInterests } } },
+    await EventUserModel.findByIdAndUpdate(
+      new mongoose.Types.ObjectId(eventUserId),
+      { $push: { interests: { $each: data.newInterests } } },
       { new: true }
     );
   }
 
-  const updatedInterest = await EventModel.findById(
-    new mongoose.Types.ObjectId(userId)
+  const updatedInterest = await EventUserModel.findById(
+    new mongoose.Types.ObjectId(eventUserId)
   )
     .lean()
     .select("interests");
@@ -450,15 +504,19 @@ export const updateLookingFor = async (
   res: Response,
   next: NextFunction
 ): Promise<Response | void> => {
-  const userId = req.user.id;
+  const eventUserId = req.eventUser?.id;
   const { data } = req.body;
+
+  if (!eventUserId) {
+    throw new AppError("Event context required", 400);
+  }
 
   if (!data.lookingForToRemove.length && !data.newLookingFor.length)
     throw new AppError("Field not found", 400);
 
   if (data.lookingForToRemove.length) {
-    await UserModel.findByIdAndUpdate(
-      new mongoose.Types.ObjectId(userId),
+    await EventUserModel.findByIdAndUpdate(
+      new mongoose.Types.ObjectId(eventUserId),
       {
         $pull: { lookingFor: { $in: data.lookingForToRemove } },
       },
@@ -467,15 +525,15 @@ export const updateLookingFor = async (
   }
 
   if (data.newLookingFor.length) {
-    await UserModel.findByIdAndUpdate(
-      new mongoose.Types.ObjectId(userId),
+    await EventUserModel.findByIdAndUpdate(
+      new mongoose.Types.ObjectId(eventUserId),
       { $push: { lookingFor: { $each: data.newLookingFor } } },
       { new: true }
     );
   }
 
-  const updatedlookinFor = await UserModel.findById(
-    new mongoose.Types.ObjectId(userId)
+  const updatedlookinFor = await EventUserModel.findById(
+    new mongoose.Types.ObjectId(eventUserId)
   )
     .lean()
     .select("lookingFor");
@@ -491,15 +549,19 @@ export const editProfilePicture = async (
   res: Response,
   next: NextFunction
 ): Promise<Response | void> => {
-  const userId = req.user.id;
+  const eventUserId = req.eventUser?.id;
+
+  if (!eventUserId) {
+    throw new AppError("Event context required", 400);
+  }
 
   if (!req.file) throw new AppError("No file uploaded", 400);
 
   const imageUrl = await imageUploader(req.file);
   if (!imageUrl) throw new AppError("Failed to upload Image", 500);
 
-  const updatedProfile = await UserModel.findByIdAndUpdate(
-    new mongoose.Types.ObjectId(userId),
+  const updatedProfile = await EventUserModel.findByIdAndUpdate(
+    new mongoose.Types.ObjectId(eventUserId),
     {
       $set: {
         profileImage: imageUrl,
@@ -521,10 +583,14 @@ export const badgeSplashReadStatus = async (
   res: Response,
   next: NextFunction
 ): Promise<Response | void> => {
-  const userId = req.user.id;
+  const eventUserId = req.eventUser?.id;
 
-  const updatedBadgeStatus = await UserModel.findByIdAndUpdate(
-    new mongoose.Types.ObjectId(userId),
+  if (!eventUserId) {
+    throw new AppError("Event context required", 400);
+  }
+
+  const updatedBadgeStatus = await EventUserModel.findByIdAndUpdate(
+    new mongoose.Types.ObjectId(eventUserId),
     {
       $set: { badgeSplashRead: true },
     },
@@ -546,15 +612,19 @@ export const updateProfileBio = async (
   res: Response,
   next: NextFunction
 ) => {
-  const userId = req.user.id;
+  const eventUserId = req.eventUser?.id;
   const { profileBio } = req.body;
+
+  if (!eventUserId) {
+    return next(new AppError("Event context required", 400));
+  }
 
   if (!profileBio) {
     return next(new AppError("profileBio is required", 400));
   }
 
-  const user = await UserModel.findByIdAndUpdate(
-    userId,
+  const eventUser = await EventUserModel.findByIdAndUpdate(
+    eventUserId,
     { profileBio },
     { new: true }
   );
@@ -562,7 +632,7 @@ export const updateProfileBio = async (
   return res.status(200).json({
     status: "success",
     message: "Profile bio updated",
-    data: user?.profileBio,
+    data: eventUser?.profileBio,
   });
 };
 
@@ -573,15 +643,19 @@ export const updateSocialLinks = async (
   res: Response,
   next: NextFunction
 ) => {
-  const userId = req.user.id;
+  const eventUserId = req.eventUser?.id;
   const { socialLinks } = req.body;
+
+  if (!eventUserId) {
+    return next(new AppError("Event context required", 400));
+  }
 
   if (!Array.isArray(socialLinks)) {
     return next(new AppError("socialLinks must be an array", 400));
   }
 
-  const user = await UserModel.findByIdAndUpdate(
-    userId,
+  const eventUser = await EventUserModel.findByIdAndUpdate(
+    eventUserId,
     { socialLinks },
     { new: true }
   );
@@ -589,7 +663,7 @@ export const updateSocialLinks = async (
   return res.status(200).json({
     status: "success",
     message: "Social links updated",
-    data: user?.socialLinks,
+    data: eventUser?.socialLinks,
   });
 };
 
@@ -600,15 +674,19 @@ export const updateServices = async (
   res: Response,
   next: NextFunction
 ) => {
-  const userId = req.user.id;
+  const eventUserId = req.eventUser?.id;
   const { services } = req.body;
+
+  if (!eventUserId) {
+    return next(new AppError("Event context required", 400));
+  }
 
   if (!Array.isArray(services)) {
     return next(new AppError("services must be an array", 400));
   }
 
-  const user = await UserModel.findByIdAndUpdate(
-    userId,
+  const eventUser = await EventUserModel.findByIdAndUpdate(
+    eventUserId,
     { services },
     { new: true }
   );
@@ -616,6 +694,6 @@ export const updateServices = async (
   return res.status(200).json({
     status: "success",
     message: "Services updated",
-    data: user?.services,
+    data: eventUser?.services,
   });
 };

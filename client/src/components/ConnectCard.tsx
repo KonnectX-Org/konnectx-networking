@@ -13,6 +13,10 @@ enum CARD_COLORS {
   "MENTOR" = "bg-[linear-gradient(40deg,_#D386FF_29%,_#9600EC_100%)]",
   "EMPLOYEE" = "bg-[linear-gradient(40deg,_#81B1C4_29%,_#019AD6_100%)]",
   "FREELANCER" = "bg-[linear-gradient(40deg,_#00DD4A_29%,_#00B43C_100%)]",
+  "COACH" = "bg-[linear-gradient(40deg,_#FFB347_29%,_#FF8C00_100%)]",
+  "EXECUTIVE" = "bg-[linear-gradient(40deg,_#708090_29%,_#2F4F4F_100%)]",
+  "SELF-EMPLOYED" = "bg-[linear-gradient(40deg,_#DDA0DD_29%,_#9370DB_100%)]",
+  "EDUCATOR" = "bg-[linear-gradient(40deg,_#98FB98_29%,_#32CD32_100%)]",
 }
 
 // const VideoPreview = ({
@@ -196,6 +200,12 @@ const getGradientCardColor = (position: string | undefined) => {
   else if (position == "Mentor") return CARD_COLORS.MENTOR;
   else if (position == "Employee") return CARD_COLORS.EMPLOYEE;
   else if (position == "Freelancer") return CARD_COLORS.FREELANCER;
+  else if (position == "Coach") return CARD_COLORS.COACH;
+  else if (position == "Executive") return CARD_COLORS.EXECUTIVE;
+  else if (position == "Self-employed") return CARD_COLORS["SELF-EMPLOYED"];
+  else if (position == "Educator") return CARD_COLORS.EDUCATOR;
+  
+  return CARD_COLORS.FOUNDER; // Default fallback
 };
 
 export const getIconFromIndustries = (label: string) => {

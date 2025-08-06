@@ -1,61 +1,12 @@
 import { Model, Schema, model } from "mongoose";
 import { AccountStatusEnum } from "../types/userEnums";
 
-interface ISocialLink {
-  type: string;
-  url: string;
-}
-
-interface IService {
-  name: string;
-  description?: string;
-  price?: number;
-}
-
 export interface IUser extends Document {
   name: string;
   email: string;
-  contactNumber: string;
-  profileImage: string;
-  profession: string;
-  position: string;
-  industry: string[];
-  help: string[];
-  company: string;
-  instituteName: string;
-  courseName: string;
-  lookingFor: string[];
-  interests: string[];
-  badgeSplashRead: Boolean;
-  previousBadgeName: String;
   status: AccountStatusEnum;
-  refreshToken: string;
-  resetPasswordToken: string;
-  resetPasswordExpires: Date | null;
   emailVerified: boolean;
-  profileBio: string;
-  socialLinks: ISocialLink[];
-  services: IService[];
-  otp: string | null;
-  otpExpiry: Date | null;
 }
-
-const SocialLinkSchema = new Schema<ISocialLink>(
-  {
-    type: { type: String, required: true, trim: true },
-    url: { type: String, required: true, trim: true },
-  },
-  { _id: false }
-);
-
-const ServiceSchema = new Schema<IService>(
-  {
-    name: { type: String, required: true, trim: true },
-    description: { type: String, trim: true },
-    price: { type: Number },
-  },
-  { _id: false }
-);
 
 const UserSchema: Schema<IUser> = new Schema<IUser>(
   {
@@ -70,65 +21,6 @@ const UserSchema: Schema<IUser> = new Schema<IUser>(
       unique: true,
       trim: true,
     },
-    contactNumber: {
-      type: String,
-      trim: true,
-    },
-    profileImage: {
-      type: String,
-    },
-    profession: {
-      type: String,
-      trim: true,
-    },
-    position: {
-      type: String,
-      trim: true,
-    },
-    industry: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    help: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    company: {
-      type: String,
-      trim: true,
-    },
-    instituteName: {
-      type: String,
-      trim: true,
-    },
-    courseName: {
-      type: String,
-      trim: true,
-    },
-    lookingFor: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    interests: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    badgeSplashRead: {
-      type: Boolean,
-      default: true,
-    },
-    previousBadgeName: {
-      type: String,
-      default: "Parmanu",
-    },
     status: {
       type: String,
       enum: Object.values(AccountStatusEnum),
@@ -139,35 +31,6 @@ const UserSchema: Schema<IUser> = new Schema<IUser>(
       type: Boolean,
       required: true,
       default: false,
-    },
-    refreshToken: {
-      type: String,
-    },
-    resetPasswordToken: {
-      type: String,
-    },
-    resetPasswordExpires: {
-      type: Date,
-    },
-    profileBio: {
-      type: String,
-      default: null,
-    },
-    socialLinks: {
-      type: [SocialLinkSchema],
-      default: [],
-    },
-    services: {
-      type: [ServiceSchema],
-      default: [],
-    },
-    otp: {
-      type: String,
-      default: null,
-    },
-    otpExpiry: {
-      type: Date,
-      default: null,
     },
   },
   {

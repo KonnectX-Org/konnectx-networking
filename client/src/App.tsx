@@ -32,14 +32,15 @@ const App = () => {
       const response = await userApi.get("/user/");
 
       if (response.status == 200) {
-        setUser(response.data.user);
+        const userData={...response.data.eventUser, ...response.data.user};
+        setUser(userData);
         setUserLevelData(response.data.userLevelData);
 
         if (!response.data.userLevelData.badgeSplashRead) navigate("/levelup");
       }
     } catch (e) {
       // Don't redirect if we're on the login page
-      if (!location.pathname.startsWith('/login')) {
+      if (!location.pathname.startsWith("/login")) {
         navigate("/form/6864dd952cf135f217b9e057");
       }
     }
@@ -51,9 +52,9 @@ const App = () => {
 
   return (
     <>
-      <UserProvider 
-        user={user} 
-        userLevelData={userLevelData} 
+      <UserProvider
+        user={user}
+        userLevelData={userLevelData}
         setUser={setUser}
         setUserLevelData={setUserLevelData}
       >
@@ -61,7 +62,7 @@ const App = () => {
           {/* Public routes */}
           <Route path="/login/:eventId" element={<LoginPage />} />
           <Route path="/form/:eventId" element={<FormPage />} />
-          
+
           {/* Authenticated routes with header */}
           <Route element={<LayoutWithHeader />}>
             <Route path="/home" element={<MainPage />} />
@@ -81,7 +82,7 @@ const App = () => {
           <Route path="/qr" element={<QRPage />} />
           <Route path="/qr-connect/:friendId" element={<QRConnecting />} />
           <Route path="/levelup" element={<LevelUpPage />} />
-          
+
           {/* Default redirect */}
           <Route path="/" element={<FormPage />} />
         </Routes>

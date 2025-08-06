@@ -7,6 +7,8 @@ dotenv.config();
 interface TokenPayload {
   id: string;
   role: string;
+  eventId?: string; // For event-specific authentication
+  eventUserId?: string; // For event user identification
 }
 
 
