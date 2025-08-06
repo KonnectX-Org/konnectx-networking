@@ -131,6 +131,22 @@ export const interests = [
     icon: "👨🏻‍🎓",
     label: "Student",
   },
+  {
+    icon: "🎓",
+    label: "Coach",
+  },
+  {
+    icon: "👔",
+    label: "Executive",
+  },
+  {
+    icon: "💼",
+    label: "Self-employed",
+  },
+  {
+    icon: "👩‍🏫",
+    label: "Educator",
+  },
 ];
 
 // Form section to collect user interests
@@ -168,6 +184,10 @@ const FormSection2 = ({
       describedAs == "Freelancer" ||
       describedAs == "Investor" ||
       describedAs == "Mentor" ||
+      describedAs == "Coach" ||
+      describedAs == "Executive" ||
+      describedAs == "Self-employed" ||
+      describedAs == "Educator" ||
       (describedAs == "Student" && instituteName && courseName)
     )
       setCanGoToNext(true);
@@ -178,7 +198,7 @@ const FormSection2 = ({
 
   return (
     <div
-      className={`w-full h-full flex-shrink-0 px-3 relative `}
+      className={`w-full h-full flex-shrink-0 px-3 relative flex flex-col`}
       // style={{
       //   height: innerHeight,
       // }}
@@ -189,7 +209,7 @@ const FormSection2 = ({
         <div className="opacity-50"></div>
       </div>
 
-      <div className="mt-2">
+      <div className="mt-2 flex flex-col h-full pb-12">
         <div
           onClick={() => backForm()}
           className="flex items-center space-x-1 text-xs text-grey cursor-pointer"
@@ -202,28 +222,30 @@ const FormSection2 = ({
           I am best described as
         </h1>
 
-        <div className="w-full grid grid-cols-3 justify-evenly gap-2">
-          {interests.map((interest, index) => (
-            <FormSquareButton
-              key={index}
-              label={interest.label}
-              icon={interest.icon}
-              setDescribedAs={setDescribedAs}
-              describedAs={describedAs}
-            />
-          ))}
-        </div>
+        <div className="flex-1 overflow-y-auto pb-20">
+          <div className="w-full grid grid-cols-3 justify-evenly gap-2">
+            {interests.map((interest, index) => (
+              <FormSquareButton
+                key={index}
+                label={interest.label}
+                icon={interest.icon}
+                setDescribedAs={setDescribedAs}
+                describedAs={describedAs}
+              />
+            ))}
+          </div>
 
-        <div className="mt-10">
-          <ConditionalFields
-            companyName={companyName}
-            describedAs={describedAs}
-            setCompanyName={setCompanyName}
-            courseName={courseName}
-            setCourseName={setCourseName}
-            instituteName={instituteName}
-            setInsituteName={setInsituteName}
-          />
+          <div className="mt-10">
+            <ConditionalFields
+              companyName={companyName}
+              describedAs={describedAs}
+              setCompanyName={setCompanyName}
+              courseName={courseName}
+              setCourseName={setCourseName}
+              instituteName={instituteName}
+              setInsituteName={setInsituteName}
+            />
+          </div>
         </div>
       </div>
 

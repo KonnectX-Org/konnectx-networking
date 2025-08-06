@@ -63,6 +63,22 @@ export const suggestedProfessions = [
     label: "Mentor",
   },
   {
+    icon: "🎓",
+    label: "Coach",
+  },
+  {
+    icon: "👔",
+    label: "Executive",
+  },
+  {
+    icon: "💼",
+    label: "Self-employed",
+  },
+  {
+    icon: "👩‍🏫",
+    label: "Educator",
+  },
+  {
     icon: "💻",
     label: "Full Stack Developer",
   },
@@ -115,7 +131,7 @@ const FormSection4 = ({
   const { showSnackbar } = useSnackbar();
   return (
     <div
-      className={`w-full h-full flex-shrink-0 px-3 relative`}
+      className={`w-full h-full flex-shrink-0 px-3 relative flex flex-col`}
       // style={{
       //   height: innerHeight,
       // }}
@@ -126,7 +142,7 @@ const FormSection4 = ({
         <div className="opacity-50"></div>
       </div>
 
-      <div className="mt-2">
+      <div className="mt-2 flex flex-col h-full pb-12">
         <div
           onClick={() => backForm()}
           className="flex items-center space-x-1 text-xs text-grey cursor-pointer"
@@ -145,16 +161,18 @@ const FormSection4 = ({
           </div>
         </div>
 
-        <div className="w-full grid grid-cols-3 justify-evenly gap-2">
-          {suggestedProfessions.map((profession, index) => (
-            <FormSquareButton
-              key={index}
-              label={profession.label}
-              icon={profession.icon}
-              setWantToNetworkWith={setWantToNetworkWith}
-              totalSelected={wantToNetworkWith.length}
-            />
-          ))}
+        <div className="flex-1 overflow-y-auto pb-20">
+          <div className="w-full grid grid-cols-3 justify-evenly gap-2">
+            {suggestedProfessions.map((profession, index) => (
+              <FormSquareButton
+                key={index}
+                label={profession.label}
+                icon={profession.icon}
+                setWantToNetworkWith={setWantToNetworkWith}
+                totalSelected={wantToNetworkWith.length}
+              />
+            ))}
+          </div>
         </div>
       </div>
 

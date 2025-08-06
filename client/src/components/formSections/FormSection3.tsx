@@ -185,7 +185,7 @@ const FormSection3 = ({
   selectedIndustries,
   nextForm,
   backForm,
-  bestDescribedAs
+  bestDescribedAs,
 }: {
   setSelectedIndustries: React.Dispatch<React.SetStateAction<string[]>>;
   selectedIndustries: string[];
@@ -194,6 +194,37 @@ const FormSection3 = ({
   bestDescribedAs: string;
 }) => {
   const { showSnackbar } = useSnackbar();
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [customIndustry, setCustomIndustry] = useState("");
+
+  const handleOtherClick = () => {
+    if (selectedIndustries.length >= 3) {
+      showSnackbar("Max 3 can be selected", "warning");
+      return;
+    }
+    setShowCustomInput(true);
+  };
+
+  const handleCustomIndustrySubmit = () => {
+    if (customIndustry.trim() === "") {
+      showSnackbar("Please enter an industry name", "warning");
+      return;
+    }
+
+    if (selectedIndustries.includes(customIndustry.trim())) {
+      showSnackbar("Industry already selected", "warning");
+      return;
+    }
+
+    setSelectedIndustries((prev) => [...prev, customIndustry.trim()]);
+    setCustomIndustry("");
+    setShowCustomInput(false);
+  };
+
+  const handleCustomIndustryCancel = () => {
+    setCustomIndustry("");
+    setShowCustomInput(false);
+  };
 
   return (
     <div
@@ -219,7 +250,8 @@ const FormSection3 = ({
 
         <div className="flex items-center justify-between">
           <h1 className="text-darkBg text-2xl font-bold my-4">
-            Choose your {bestDescribedAs==="Student"?"Interests":"Industry"}
+            Choose your{" "}
+            {bestDescribedAs === "Student" ? "Interests" : "Industry"}
           </h1>
 
           <div className="border border-grey  rounded-lg px-2 py-1">
@@ -227,7 +259,33 @@ const FormSection3 = ({
           </div>
         </div>
 
-        <div className="w-full h-[72vh] pb-32 mt-3  grid grid-cols-2 gap-2 overflow-y-scroll custom-scrollbar">
+        {/* Selected Industries Display */}
+
+        <div className="mb-4">
+          <p className="text-sm text-grey mb-2">Selected:</p>
+          <div className="flex flex-wrap gap-2">
+            {selectedIndustries.length<=0?<p className="text-sm text-grey">No Industries Selected</p>:selectedIndustries.map((industry, index) => (
+              <div
+                key={index}
+                className="bg-primary text-white px-3 py-1 rounded-full text-xs flex items-center space-x-1"
+              >
+                <span>{industry}</span>
+                <button
+                  onClick={() => {
+                    setSelectedIndustries((prev) =>
+                      prev.filter((item) => item !== industry)
+                    );
+                  }}
+                  className="ml-1 text-white hover:text-gray-200"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="w-full h-[62vh] pb-4 mt-3 grid grid-cols-2 gap-2 overflow-y-scroll custom-scrollbar">
           {industries.map((industry, index) => (
             <IndustryBox
               key={index}
@@ -237,8 +295,62 @@ const FormSection3 = ({
               totalSelected={selectedIndustries.length}
             />
           ))}
+
+          {/* Add Custom Button - Less Prominent */}
+          <div className="col-span-2 mt-4">
+            <button
+              onClick={handleOtherClick}
+              disabled={selectedIndustries.length >= 3}
+              className={`w-full py-2 border border-dashed rounded-md text-center text-sm ${
+                selectedIndustries.length >= 3
+                  ? "border-gray-300 text-gray-400 cursor-not-allowed bg-gray-50"
+                  : "border-grey text-grey hover:border-darkBg hover:text-darkBg cursor-pointer"
+              } transition-colors`}
+            >
+              <span className="mr-1 text-xs">+</span>
+              Add Custom{" "}
+              {bestDescribedAs === "Student" ? "Interest" : "Industry"}
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Custom Industry Input Modal */}
+      {showCustomInput && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center px-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+            <h3 className="text-lg font-bold mb-4 text-darkBg">
+              Enter Custom{" "}
+              {bestDescribedAs === "Student" ? "Interest" : "Industry"}
+            </h3>
+            <input
+              type="text"
+              value={customIndustry}
+              onChange={(e) => setCustomIndustry(e.target.value)}
+              placeholder={`Enter ${
+                bestDescribedAs === "Student" ? "interest" : "industry"
+              } name...`}
+              className="w-full p-3 border border-lightGrey rounded-md mb-4 text-darkBg"
+              maxLength={50}
+              autoFocus
+            />
+            <div className="flex space-x-3">
+              <button
+                onClick={handleCustomIndustryCancel}
+                className="flex-1 py-2 px-4 border border-lightGrey rounded-md text-darkBg font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCustomIndustrySubmit}
+                className="flex-1 py-2 px-4 bg-darkBg text-white rounded-md font-medium"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="fixed bottom-5 left-0 w-full flex flex-col items-center justify-center px-3">
         <button

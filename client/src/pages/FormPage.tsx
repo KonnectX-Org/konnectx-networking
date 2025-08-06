@@ -55,9 +55,6 @@ const FormPage = () => {
   const [currentFormIndex, setCurrentFormIndex] = useState<number>(0);
   const [windowHeight, setWindowHeight] = useState<number>(window.innerHeight);
 
-
- 
-
   const [transitionDirection, setTransitionDirection] = useState<
     "forward" | "backward"
   >("forward");
@@ -80,6 +77,7 @@ const FormPage = () => {
   const [companyName, setCompanyName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [phoneNumber, setPhoneNumber] = useState<string>("");
+  const [linkedin, setLinkedin] = useState<string>("");
 
   // It is from the compulsory last form page
   const [helps, setHelps] = useState<string[]>([]);
@@ -137,6 +135,7 @@ const FormPage = () => {
         data: {
           name,
           email,
+          linkedin,
           eventId,
           contactNumber: phoneNumber,
           company: companyName,
@@ -266,7 +265,6 @@ const FormPage = () => {
                     staggerChildren: 0,
                   }}
                   className="h-full"
-
                 >
                   <FormSection1
                     name={name}
@@ -276,6 +274,8 @@ const FormPage = () => {
                     number={phoneNumber}
                     setNumber={setPhoneNumber}
                     nextForm={nextForm}
+                    linkedin={linkedin}
+                    setLinkedin={setLinkedin}
                   />
                 </motion.div>
               )}
@@ -293,7 +293,6 @@ const FormPage = () => {
                     staggerChildren: 0,
                   }}
                   className="h-full"
-
                 >
                   <FormSection2
                     setDescribedAs={setDescribedAs}
@@ -323,7 +322,6 @@ const FormPage = () => {
                     staggerChildren: 0,
                   }}
                   className="h-full"
-
                 >
                   {describedAs == "Freelancer" || describedAs == "Employee" ? (
                     <FormSectionNonCompany
@@ -331,9 +329,9 @@ const FormPage = () => {
                       backForm={backForm}
                       bestDescribedAs={bestDescribedAs}
                       setBestDescribedAs={setBestDescribedAs}
-                      />
-                    ) : (
-                      <FormSection3
+                    />
+                  ) : (
+                    <FormSection3
                       nextForm={nextForm}
                       backForm={backForm}
                       setSelectedIndustries={setSelectedIndustries}
@@ -357,7 +355,6 @@ const FormPage = () => {
                     staggerChildren: 0,
                   }}
                   className="h-full"
-
                 >
                   <FormSection4
                     nextForm={nextForm}
@@ -381,7 +378,6 @@ const FormPage = () => {
                     staggerChildren: 0,
                   }}
                   className="h-full"
-
                 >
                   <FormSectionCompulsory
                     helps={helps}

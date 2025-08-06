@@ -1,7 +1,9 @@
-import { InputAdornment, TextField } from "@mui/material";
+import { PhoneInput } from "react-international-phone";
+import "react-international-phone/style.css";
 import screwClockIcon from "../../assets/icons/screwClockIcon.svg";
 import { useSnackbar } from "../../hooks/SnackbarContext";
 import { useNavigate } from "react-router-dom";
+import "./FormSection1.css";
 
 // Form for getting the username
 const FormSection1 = ({
@@ -11,6 +13,8 @@ const FormSection1 = ({
   setEmail,
   number,
   setNumber,
+  linkedin,
+  setLinkedin,
   nextForm,
 }: {
   name: string;
@@ -19,6 +23,8 @@ const FormSection1 = ({
   setEmail: React.Dispatch<React.SetStateAction<string>>;
   number: string;
   setNumber: React.Dispatch<React.SetStateAction<string>>;
+  linkedin: string;
+  setLinkedin: React.Dispatch<React.SetStateAction<string>>;
   nextForm: Function;
 }) => {
   const { showSnackbar } = useSnackbar();
@@ -26,13 +32,23 @@ const FormSection1 = ({
 
   const validAndGoToNext = () => {
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    const phoneRegex = /^\d{10}$/;
 
     // Function to validate email
     const validateEmail = (email: string) => emailRegex.test(email);
 
-    // Function to validate phone number
-    const validatePhone = (phone: string) => phoneRegex.test(phone);
+    // Function to validate phone number (for Indian numbers without country code)
+    const validatePhone = (phone: string) => {
+      // Remove country code if present and validate 10 digits
+      const cleanPhone = phone.replace(/^\+91\s?/, "").replace(/\D/g, "");
+      return cleanPhone.length === 10;
+    };
+
+    // Function to validate LinkedIn URL (optional)
+    const validateLinkedIn = (url: string) => {
+      if (!url) return true; // Optional field
+      const linkedinRegex = /^https?:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9-]+\/?$/;
+      return linkedinRegex.test(url);
+    };
 
     if (name && email && number) {
       if (!validateEmail(email)) {
@@ -40,6 +56,9 @@ const FormSection1 = ({
         return;
       } else if (!validatePhone(number)) {
         showSnackbar("Enter a valid phone number", "warning");
+        return;
+      } else if (!validateLinkedIn(linkedin)) {
+        showSnackbar("Enter a valid LinkedIn URL", "warning");
         return;
       }
 
@@ -50,12 +69,7 @@ const FormSection1 = ({
   };
 
   return (
-    <div
-      className={`w-full h-full flex flex-col flex-shrink-0 relative px-3`}
-      // style={{
-      //   height: innerHeight,
-      // }}
-    >
+    <div className={`w-full h-full flex flex-col flex-shrink-0 relative px-3`}>
       <div className="w-full grid grid-cols-3 grid-rows-1 py-3 gap-3 [&>*]:bg-darkBg [&>*]:h-1  [&>*]:rounded-full [&>*]:opacity-50">
         <div></div>
         <div></div>
@@ -72,63 +86,78 @@ const FormSection1 = ({
           Tell us about yourself!
         </h1>
 
-        <div className="w-full space-y-6">
-          <TextField
-            type="text"
-            label="Full Name"
-            value={name}
-            InputLabelProps={{
-              shrink: true,
-            }}
-            onChange={(e) => setName(e.target.value)}
-            variant="outlined"
-            sx={{
-              width: "100%",
-              borderRadius: "8px",
-            }}
-          />
-          <TextField
-            type="email"
-            label="Email ID"
-            value={email}
-            InputLabelProps={{
-              shrink: true,
-            }}
-            onChange={(e) => setEmail(e.target.value)}
-            variant="outlined"
-            sx={{
-              width: "100%",
-            }}
-          />
-          <TextField
-            type="text"
-            label="Phone Number"
-            value={number}
-            onChange={(e) => {
-              setNumber(e.target.value.replace(/\D/g, '').slice(0, 10));
-            }}
-            variant="outlined"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <p className="text-gray-500">+91</p>
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              width: "100%",
-            }}
-          />
-        {/* Login link below phone number field */}
-        <div className="mt-2">
-          <span>Existing User? </span>
-          <span
-            className="text-blue-600 underline cursor-pointer"
-            onClick={() => navigate("/login/6864dd952cf135f217b9e057")}
-          >
-            Login
-          </span>
-        </div>
+        <div className="w-full space-y-3">
+          {/* Full Name Input */}
+          <div className="w-full">
+            <label className="block text-sm font-medium text-darkBg mb-2">
+              Full Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setName(e.target.value)
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Enter your full name"
+            />
+          </div>
+
+          {/* Email Input */}
+          <div className="w-full">
+            <label className="block text-sm font-medium text-darkBg mb-2">
+              Email ID
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setEmail(e.target.value)
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Enter your email address"
+            />
+          </div>
+
+          {/* Phone Number Input */}
+          <div className="w-full">
+            <label className="block text-sm font-medium text-darkBg mb-2">
+              Phone Number
+            </label>
+            <PhoneInput
+              defaultCountry="in"
+              value={number}
+              onChange={(phone: string) => setNumber(phone)}
+              className="w-full"
+            />
+          </div>
+
+          {/* LinkedIn Input */}
+          <div className="w-full">
+            <label className="block text-sm font-medium text-darkBg mb-2">
+              LinkedIn Profile (Optional)
+            </label>
+            <input
+              type="url"
+              value={linkedin}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setLinkedin(e.target.value)
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="https://linkedin.com/in/your-profile"
+            />
+          </div>
+
+          {/* Login link below phone number field */}
+          <div className="mt-2 text-sm ">
+            <span>Existing User? </span>
+            <span
+              className="text-blue-600 underline cursor-pointer"
+              onClick={() => navigate("/login/6864dd952cf135f217b9e057")}
+            >
+              Login
+            </span>
+          </div>
         </div>
       </div>
 
@@ -145,7 +174,7 @@ const FormSection1 = ({
             validAndGoToNext();
           }}
           className={`bg-darkBg mt-4 font-bold text-white py-4 rounded-md w-full text-xs ${
-            name && email && number.length == 10 ? "opacity-100" : "opacity-60"
+            name && email && number ? "opacity-100" : "opacity-60"
           }`}
         >
           I am ready to start!
