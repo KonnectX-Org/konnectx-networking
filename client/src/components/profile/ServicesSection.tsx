@@ -8,7 +8,12 @@ interface Service {
   name: string;
 }
 
-const ServicesSection = () => {
+interface ServicesSectionProps {
+  readOnly?: boolean;
+  services?: Service[];
+}
+
+const ServicesSection = ({ readOnly = false, services: externalServices }: ServicesSectionProps) => {
   const { user, updateUser } = useUser();
   const { showSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(false);
@@ -19,10 +24,12 @@ const ServicesSection = () => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (user?.services) {
+    if (readOnly && externalServices) {
+      setServices(externalServices);
+    } else if (user?.services) {
       setServices(user.services);
     }
-  }, [user]);
+  }, [user, readOnly, externalServices]);
 
   const updateServicesApi = async (servicesToUpdate: Service[]) => {
     setLoading(true);
@@ -88,43 +95,50 @@ const ServicesSection = () => {
     }
   }, [showAddInput]);
 
+  // Don't render if readOnly and no services
+  if (readOnly && services.length === 0) {
+    return null;
+  }
+
   return (
     <div className="bg-white p-3 rounded-lg">
-      {loading && <div className="text-xs text-blue-500 mb-2">Saving...</div>}
+      {!readOnly && loading && <div className="text-xs text-blue-500 mb-2">Saving...</div>}
 
       <div className="flex items-center justify-between mb-4">
         <div className="flex gap-2 items-center">
           <h3 className="text-sm font-medium">Services</h3>
-          {services.length === 0 && (
+          {!readOnly && services.length === 0 && (
             <CircleAlert size={14} className="text-red-500" />
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {services.length > 0 && (
-            <button
-              onClick={toggleEditMode}
-              className={`p-1 rounded transition-colors ${
-                isEditMode ? "bg-blue-100 text-blue-600" : "text-black"
-              }`}
-              title={isEditMode ? "Exit edit mode" : "Edit services"}
-            >
-              <Pencil size={16} />
-            </button>
-          )}
+        {!readOnly && (
+          <div className="flex items-center gap-2">
+            {services.length > 0 && (
+              <button
+                onClick={toggleEditMode}
+                className={`p-1 rounded transition-colors ${
+                  isEditMode ? "bg-blue-100 text-blue-600" : "text-black"
+                }`}
+                title={isEditMode ? "Exit edit mode" : "Edit services"}
+              >
+                <Pencil size={16} />
+              </button>
+            )}
 
-          {(services.length === 0 || isEditMode) && !showAddInput && (
-            <button
-              onClick={() => setShowAddInput(true)}
-              className="p-1 hover:bg-gray-100 rounded"
-              title="Add service"
-            >
-              <Plus size={16} />
-            </button>
-          )}
-        </div>
+            {(services.length === 0 || isEditMode) && !showAddInput && (
+              <button
+                onClick={() => setShowAddInput(true)}
+                className="p-1 hover:bg-gray-100 rounded"
+                title="Add service"
+              >
+                <Plus size={16} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {showAddInput && (
+      {!readOnly && showAddInput && (
         <div className="flex items-center gap-2 mb-4">
           <input
             ref={inputRef}
@@ -167,13 +181,13 @@ const ServicesSection = () => {
             <div
               key={index}
               className={`px-4 py-2 rounded-full flex items-center gap-1 text-sm ${
-                isEditMode
+                !readOnly && isEditMode
                   ? "bg-black text-white"
                   : "bg-black text-white"
               }`}
             >
               <span>{service.name}</span>
-              {isEditMode && (
+              {!readOnly && isEditMode && (
                 <button
                   onClick={() => handleDeleteService(index)}
                   className="ml-1 text-white opacity-80 hover:opacity-100"
@@ -185,7 +199,7 @@ const ServicesSection = () => {
             </div>
           ))
         ) : (
-          <div className="text-gray-500 text-sm">No services added</div>
+          !readOnly && <div className="text-gray-500 text-sm">No services added</div>
         )}
       </div>
     </div>

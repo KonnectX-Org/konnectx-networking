@@ -13,7 +13,12 @@ interface SocialLink {
   icon: React.ComponentType<any>;
 }
 
-export default function SocialLinks() {
+interface SocialLinksProps {
+  readOnly?: boolean;
+  socialLinks?: { type: string; url: string }[];
+}
+
+export default function SocialLinks({ readOnly = false, socialLinks: externalSocialLinks }: SocialLinksProps) {
   const { user, updateUser } = useUser();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +59,14 @@ export default function SocialLinks() {
   };
 
   useEffect(() => {
-    if (user?.socialLinks) {
+    if (readOnly && externalSocialLinks) {
+      const initialLinks = externalSocialLinks.map((link) => ({
+        type: link.type as SocialType,
+        url: link.url,
+        icon: socialTypes[link.type as SocialType].icon,
+      }));
+      setLinks(initialLinks);
+    } else if (user?.socialLinks) {
       const initialLinks = user.socialLinks.map((link) => ({
         type: link.type as SocialType,
         url: link.url,
@@ -62,7 +74,7 @@ export default function SocialLinks() {
       }));
       setLinks(initialLinks);
     }
-  }, [user]);
+  }, [user, readOnly, externalSocialLinks]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -188,61 +200,68 @@ export default function SocialLinks() {
     setShowAddMenu(false);
   };
 
+  // Don't render if readOnly and no links
+  if (readOnly && links.length === 0) {
+    return null;
+  }
+
   return (
     <div className="bg-white p-3 rounded-lg">
-      {loading && <div className="text-xs text-blue-500 mb-2">Saving...</div>}
-      {error && <div className="text-xs text-red-500 mb-2">{error}</div>}
+      {!readOnly && loading && <div className="text-xs text-blue-500 mb-2">Saving...</div>}
+      {!readOnly && error && <div className="text-xs text-red-500 mb-2">{error}</div>}
 
       <div className="flex items-center justify-between mb-4">
         <div className="flex gap-2 items-center">
           <h3 className="text-sm font-medium">Social Links</h3>
-          {links.length === 0 && (
+          {!readOnly && links.length === 0 && (
             <CircleAlert size={14} className="text-red-500" />
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {links.length > 0 && (
-            <button
-              onClick={toggleEditMode}
-              className={`p-1 rounded transition-colors ${
-                isEditMode ? "bg-blue-100 text-blue-600" : "text-black"
-              }`}
-              title={isEditMode ? "Exit edit mode" : "Edit social links"}
-            >
-              <Icon icon="material-symbols:edit-outline-rounded" />
-            </button>
-          )}
-
-          {(links.length === 0 || isEditMode) && (
-            <div className="relative" ref={addMenuRef}>
+        {!readOnly && (
+          <div className="flex items-center gap-2">
+            {links.length > 0 && (
               <button
-                onClick={() => setShowAddMenu(!showAddMenu)}
-                className="p-1 hover:bg-gray-100 rounded"
-                title="Add social link"
+                onClick={toggleEditMode}
+                className={`p-1 rounded transition-colors ${
+                  isEditMode ? "bg-blue-100 text-blue-600" : "text-black"
+                }`}
+                title={isEditMode ? "Exit edit mode" : "Edit social links"}
               >
-                <Plus size={20} />
+                <Icon icon="material-symbols:edit-outline-rounded" />
               </button>
+            )}
 
-              {showAddMenu && (
-                <div className="absolute top-full right-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-                  {Object.entries(socialTypes).map(([key, { label, icon }]) => (
-                    <button
-                      key={key}
-                      onClick={() => handleAddPlatform(key as SocialType)}
-                      className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-sm first:rounded-t-md last:rounded-b-md"
-                    >
-                      {React.createElement(icon, {
-                        size: 16,
-                        className: "text-gray-600",
-                      })}
-                      <span>{label}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+            {(links.length === 0 || isEditMode) && (
+              <div className="relative" ref={addMenuRef}>
+                <button
+                  onClick={() => setShowAddMenu(!showAddMenu)}
+                  className="p-1 hover:bg-gray-100 rounded"
+                  title="Add social link"
+                >
+                  <Plus size={20} />
+                </button>
+
+                {showAddMenu && (
+                  <div className="absolute top-full right-0 mt-1 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                    {Object.entries(socialTypes).map(([key, { label, icon }]) => (
+                      <button
+                        key={key}
+                        onClick={() => handleAddPlatform(key as SocialType)}
+                        className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-sm first:rounded-t-md last:rounded-b-md"
+                      >
+                        {React.createElement(icon, {
+                          size: 16,
+                          className: "text-gray-600",
+                        })}
+                        <span>{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="space-y-3">
@@ -253,7 +272,7 @@ export default function SocialLinks() {
                 <link.icon size={16} className="text-gray-600" />
               </div>
 
-              {editingIndex === index ? (
+              {!readOnly && editingIndex === index ? (
                 <>
                   <input
                     type="text"
@@ -284,14 +303,20 @@ export default function SocialLinks() {
                     value={link.url}
                     readOnly
                     className={`flex-1 px-3 py-2 border border-gray-200 rounded-md text-sm ${
-                      isEditMode
+                      !readOnly && isEditMode
                         ? "bg-white cursor-pointer hover:bg-gray-50"
                         : "bg-gray-50"
-                    }`}
-                    onClick={() => isEditMode && startEditing(index)}
-                    title={isEditMode ? "Click to edit" : ""}
+                    } ${readOnly ? "cursor-pointer" : ""}`}
+                    onClick={() => {
+                      if (readOnly) {
+                        window.open(link.url, '_blank');
+                      } else if (isEditMode) {
+                        startEditing(index);
+                      }
+                    }}
+                    title={readOnly ? "Click to open link" : isEditMode ? "Click to edit" : ""}
                   />
-                  {isEditMode && (
+                  {!readOnly && isEditMode && (
                     <button
                       onClick={() => handleDelete(index)}
                       className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"
@@ -305,7 +330,7 @@ export default function SocialLinks() {
             </div>
           ))
         ) : (
-          <div className="text-gray-500 text-sm">No social links added</div>
+          !readOnly && <div className="text-gray-500 text-sm">No social links added</div>
         )}
       </div>
     </div>

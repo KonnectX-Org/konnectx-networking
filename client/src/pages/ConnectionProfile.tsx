@@ -8,6 +8,8 @@ import CustomButton from "../components/CustomButton";
 import { useSnackbar } from "../hooks/SnackbarContext";
 import { badgeInfo } from "./Profile";
 import { eventId } from "../utils/eventId";
+import SocialLinks from "../components/profile/SocialLinksSection";
+import ServicesSection from "../components/profile/ServicesSection";
 
 const ConnectionProfile = () => {
   const navigate = useNavigate();
@@ -107,6 +109,27 @@ const ConnectionProfile = () => {
     const url = `https://wa.me/91${profileInfo?.contactNumber}?text=Hi%20${profileInfo?.name}%21%20Great%20meeting%20you%20at%20TIECON.%20Let%E2%80%99s%20connect%20and%20stay%20in%20touch%21`;
 
     window.open(url);
+  };
+
+  const connectOnLinkedIn = async () => {
+    const linkedInLink = profileInfo?.socialLinks?.find(
+      (link) => link.type === "linkedin"
+    );
+    
+    if (linkedInLink) {
+      // Ensure the URL starts with http/https for proper navigation
+      let url = linkedInLink.url;
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+      }
+      window.open(url, '_blank');
+    }
+  };
+
+  const hasLinkedInProfile = () => {
+    return profileInfo?.socialLinks?.some(
+      (link) => link.type === "linkedin"
+    ) || false;
   };
 
   // const saveContact = async () => {
@@ -268,6 +291,22 @@ const ConnectionProfile = () => {
               </div>
             </div>
 
+            {/* Social Links Section - only show if has social links */}
+            {profileInfo?.socialLinks && profileInfo.socialLinks.length > 0 && (
+              <SocialLinks 
+                readOnly={true} 
+                socialLinks={profileInfo.socialLinks} 
+              />
+            )}
+
+            {/* Services Section - only show if has services */}
+            {profileInfo?.services && profileInfo.services.length > 0 && (
+              <ServicesSection 
+                readOnly={true} 
+                services={profileInfo.services} 
+              />
+            )}
+
             {/* interests section */}
             {profileInfo?.position != "Employee" &&
               profileInfo?.position != "Freelancer" && (
@@ -338,14 +377,25 @@ const ConnectionProfile = () => {
 
         {currentState == "CONNECTED" && (
           <div>
-            <CustomButton
-              onClick={() => {
-                saveContact();
-              }}
-              text="Connect on WhatsApp"
-              type="filled"
-              width="100%"
-            />
+            {hasLinkedInProfile() ? (
+              <CustomButton
+                onClick={() => {
+                  connectOnLinkedIn();
+                }}
+                text="Connect on LinkedIn"
+                type="filled"
+                width="100%"
+              />
+            ) : (
+              <CustomButton
+                onClick={() => {
+                  saveContact();
+                }}
+                text="Connect on WhatsApp"
+                type="filled"
+                width="100%"
+              />
+            )}
           </div>
         )}
 
