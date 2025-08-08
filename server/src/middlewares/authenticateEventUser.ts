@@ -75,12 +75,14 @@ export const validateEventContext = (
   next: NextFunction
 ): void => {
   const { eventId } = req.params;
+  console.log("Validating event context for eventId:", eventId);
+  console.log("Authenticated eventUser:", req.eventUser);
   
   if (!req.eventUser) {
     return next(new AppError("Event context not found", 401));
   }
 
-  if (req.eventUser.tokenEventId !== eventId) {
+  if (req.eventUser.eventId !== eventId) {
     return next(new AppError("Unauthorized: Event context mismatch", 403));
   }
 

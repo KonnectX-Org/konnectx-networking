@@ -1,28 +1,28 @@
 import express from "express";
 import asyncHandler from "../../../utils/asyncHandler";
 import * as eventUserControllers from "../controllers/eventUserController";
-import { authenticate } from "../../../middlewares/authenticate";
+import { authenticateEventUser } from "../../../middlewares/authenticateEventUser";
 
 const router = express.Router();
 
 router.get(
   "/get-all-event-Guest",
-  authenticate,
+  authenticateEventUser,
   asyncHandler(eventUserControllers.getGuestOfAnEvent)
 );
 router.get(
   "/get-events",
-  authenticate,
+  authenticateEventUser,
   asyncHandler(eventUserControllers.getAllEventsOfUser)
 );
 router.get(
   "/get-attendees-list",
-  authenticate,
+  authenticateEventUser,
   asyncHandler(eventUserControllers.getAttendiesRole)
 );
 router.get(
   "/search-guests",
-  authenticate,
+  authenticateEventUser,
   asyncHandler(eventUserControllers.searchGuestInEvents)
 );
 

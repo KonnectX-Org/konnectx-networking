@@ -2,18 +2,18 @@ import { Model, Schema, model } from "mongoose";
 import { NotificationEnum } from "../types/notificationEnums";
 
 export interface INotification extends Document {
-    userId: Schema.Types.ObjectId,  //  particular user ke notification filter karne ke liye 
+    userId: Schema.Types.ObjectId,  //  particular eventUser ke notification filter karne ke liye 
     type: NotificationEnum;          // request recived,accepted, 
     message: string;
     isRead: boolean;
-    reference?: Schema.Types.ObjectId   // Kisne kiya hai , particualr koi kaam
+    reference?: Schema.Types.ObjectId   // Kisne kiya hai (eventUserId), particualr koi kaam
 }
 
 const NotificationSchema: Schema<INotification> = new Schema({
     userId: { 
         type: Schema.Types.ObjectId, 
         required: true, 
-        ref: 'User' 
+        ref: 'EventUser' 
     },
     type: {
         type: String,
@@ -30,7 +30,7 @@ const NotificationSchema: Schema<INotification> = new Schema({
     },
     reference: { 
         type: Schema.Types.ObjectId, 
-        ref: 'User', 
+        ref: 'EventUser', 
         required: false 
     },
 },{

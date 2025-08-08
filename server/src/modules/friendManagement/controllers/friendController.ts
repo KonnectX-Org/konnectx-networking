@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import AppError from "../../../utils/appError";
-import { UserModel } from "../../user/models/userModel";
+import { EventUserModel } from "../../event/models/eventUsersModel";
 import mongoose from "mongoose";
 import { FriendRequestModel } from "../models/friendReqModel";
 import {  RequestStatusEnum } from "../types/friendManagementEnums";
@@ -17,8 +17,11 @@ import { badgeLevels } from "../../../utils/badgeLevels";
 // notification
 export const sendFriendRequest = async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
 
-    const userId = req.user.id;
+    const eventUserId = req.eventUser?.id;
     const { data } = req.body;
+
+
+    console.log("eventUserId Coming from ahead",eventUserId)
 
     // if (!data.note && !req.file)
     //     throw new AppError("Either note or video, one is required", 400);
@@ -26,24 +29,26 @@ export const sendFriendRequest = async (req: Request,res: Response,next: NextFun
     if (!data.recieverId)
         throw new AppError("RecieverId required", 400);
 
-    // receiver exists
-    const senderPromise = UserModel.findById(new mongoose.Types.ObjectId(userId)).select("name");
-    const receiverExistPromise = UserModel.exists({ _id: new mongoose.Types.ObjectId(String(data.recieverId)) });
 
-    // freind request exist 
+    // Get sender info and check if receiver exists
+    const senderPromise = EventUserModel.findById(eventUserId);
+    const receiverExistPromise = EventUserModel.exists({ _id: new mongoose.Types.ObjectId(String(data.recieverId)) });
+
+    // Check if friend request already exists 
     const existingRequestPromise = FriendRequestModel.findOne({
         $or: [
-            { sender: new mongoose.Types.ObjectId(userId), receiver: new mongoose.Types.ObjectId(String(data.recieverId)) },
-            { sender: new mongoose.Types.ObjectId(String(data.recieverId)), receiver: new mongoose.Types.ObjectId(userId) }
+            { sender: eventUserId, receiver: new mongoose.Types.ObjectId(String(data.recieverId)) },
+            { sender: new mongoose.Types.ObjectId(String(data.recieverId)), receiver: eventUserId }
         ],
     });
 
     const [sender, receiverExist, existingRequest] = await Promise.all([senderPromise, receiverExistPromise, existingRequestPromise]);
+    
     if (!sender)
-        throw new AppError("Reciever not found", 404);
+        throw new AppError("Sender not found", 404);
 
     if (!receiverExist)
-        throw new AppError("Reciever not found", 404);
+        throw new AppError("Receiver not found", 404);
 
     if (existingRequest)
         throw new AppError("Friend Request Already exist", 409);
@@ -59,7 +64,7 @@ export const sendFriendRequest = async (req: Request,res: Response,next: NextFun
 
     // create friend request
     const newFriendRequested = await FriendRequestModel.create({
-        sender: userId,
+        sender: eventUserId,
         receiver: data.recieverId,
         note: data.note ?? "",
         video: video ?? "",
@@ -73,7 +78,7 @@ export const sendFriendRequest = async (req: Request,res: Response,next: NextFun
         userId: data.recieverId,
         type: NotificationEnum.FRIEND_REQUEST_RECEIVED,
         message: `${sender.name} sent you a friend request`,
-        reference: userId
+        reference: eventUserId
     }
     await createNotification(notificationData);
 
@@ -89,7 +94,7 @@ export const sendFriendRequest = async (req: Request,res: Response,next: NextFun
 // make friend 
 export const acceptRequestReceived = async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
 
-    const userId = req.user.id;
+    const eventUserId = req.eventUser?.id;
     const { senderId, status } = req.query;
 
     if (!senderId || !status)
@@ -99,7 +104,7 @@ export const acceptRequestReceived = async (req: Request,res: Response,next: Nex
         throw new AppError("Invalid status provided", 400);
     }
 
-    const user = await UserModel.findById(new mongoose.Types.ObjectId(userId)).select("name");
+    const user = await EventUserModel.findById(eventUserId);
     if (!user)
         throw new AppError("Invalid request", 409);
 
@@ -108,7 +113,7 @@ export const acceptRequestReceived = async (req: Request,res: Response,next: Nex
         const updateFriendRequest = await FriendRequestModel.findOneAndUpdate(
             {
                 sender: new mongoose.Types.ObjectId(String(senderId)),
-                receiver: new mongoose.Types.ObjectId(String(userId))
+                receiver: new mongoose.Types.ObjectId(String(eventUserId))
             },
             {
                 $set: { status }
@@ -120,7 +125,7 @@ export const acceptRequestReceived = async (req: Request,res: Response,next: Nex
 
         const friend = await FriendModel.create({
             user1: new mongoose.Types.ObjectId(String(senderId)),
-            user2: new mongoose.Types.ObjectId(String(userId))
+            user2: new mongoose.Types.ObjectId(String(eventUserId))
         });
 
         if (!friend) throw new AppError("Failed to add friend", 500);
@@ -129,7 +134,7 @@ export const acceptRequestReceived = async (req: Request,res: Response,next: Nex
             userId: String(senderId),
             type: NotificationEnum.FRIEND_REQUEST_ACCEPTED,
             message: `${user.name} accepted your friend request`,
-            reference: userId
+            reference: eventUserId
         }
         await createNotification(notificationData);
 
@@ -143,7 +148,7 @@ export const acceptRequestReceived = async (req: Request,res: Response,next: Nex
     // on rejectiion delete freind request
     const deleteFriendRequest = await FriendRequestModel.deleteOne({
         sender: new mongoose.Types.ObjectId(String(senderId)),
-        receiver: new mongoose.Types.ObjectId(String(userId))
+        receiver: new mongoose.Types.ObjectId(String(eventUserId))
     });
 
     if (deleteFriendRequest.deletedCount === 0)
@@ -159,18 +164,18 @@ export const acceptRequestReceived = async (req: Request,res: Response,next: Nex
 
 export const getRequestSended = async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
 
-    const userId = req.user.id;
+    const eventUserId = req.eventUser?.id;
 
     const data = await FriendRequestModel.aggregate([
         {
             $match: {
-                sender: new mongoose.Types.ObjectId(userId),
+                sender: new mongoose.Types.ObjectId(String(eventUserId)),
                 status: RequestStatusEnum.PENDING
             }
         },
         {
             $lookup: {
-                from: "users",
+                from: "eventusers",
                 localField: "receiver",
                 foreignField: "_id",
                 as: "requestSentUser"
@@ -212,18 +217,18 @@ export const getRequestSended = async (req: Request,res: Response,next: NextFunc
 
 export const getRequestRecieved = async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
 
-    const userId = req.user.id;
+    const eventUserId = req.eventUser?.id;
 
     const data = await FriendRequestModel.aggregate([
         {
             $match: {
-                receiver: new mongoose.Types.ObjectId(userId),
+                receiver: new mongoose.Types.ObjectId(String(eventUserId)),
                 status: RequestStatusEnum.PENDING
             }
         },
         {
             $lookup: {
-                from: "users",
+                from: "eventusers",
                 localField: "sender",
                 foreignField: "_id",
                 as: "requestRecievedUser"
@@ -279,15 +284,15 @@ export const getRequestRecieved = async (req: Request,res: Response,next: NextFu
 
 export const getAllFriends = async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
 
-    const userId = req.user.id;
-    console.log("userID", userId);
+    const eventUserId = req.eventUser?.id;
+    console.log("eventUserId", eventUserId);
 
     const friends = await FriendModel.aggregate([
         {
             $match: {
                 $or: [
-                    { user1: new mongoose.Types.ObjectId(userId) },
-                    { user2: new mongoose.Types.ObjectId(userId) }
+                    { user1: new mongoose.Types.ObjectId(String(eventUserId)) },
+                    { user2: new mongoose.Types.ObjectId(String(eventUserId)) }
                 ]
             }
         },
@@ -295,7 +300,7 @@ export const getAllFriends = async (req: Request,res: Response,next: NextFunctio
             $project: {
                 otherUserId: {
                     $cond: {
-                        if: { $eq: ["$user1", new mongoose.Types.ObjectId(userId)] },
+                        if: { $eq: ["$user1", new mongoose.Types.ObjectId(String(eventUserId))] },
                         then: "$user2",
                         else: "$user1"
                     }
@@ -304,7 +309,7 @@ export const getAllFriends = async (req: Request,res: Response,next: NextFunctio
         },
         {
             $lookup: {
-                from: 'users',
+                from: 'eventusers',
                 foreignField: "_id",
                 localField: "otherUserId",
                 as: "friends"
@@ -346,7 +351,7 @@ export const getAllFriends = async (req: Request,res: Response,next: NextFunctio
 
 export const unfollowFriend = async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
 
-    const userId = req.user.id;
+    const eventUserId = req.eventUser?.id;
     const { friendId } = req.query;
 
     if (!friendId)
@@ -361,12 +366,12 @@ export const unfollowFriend = async (req: Request,res: Response,next: NextFuncti
             {
                 $or: [
                     {
-                        sender: new mongoose.Types.ObjectId(userId),
+                        sender: new mongoose.Types.ObjectId(String(eventUserId)),
                         receiver: new mongoose.Types.ObjectId(String(friendId))
                     },
                     {
                         sender: new mongoose.Types.ObjectId(String(friendId)),
-                        receiver: new mongoose.Types.ObjectId(userId)
+                        receiver: new mongoose.Types.ObjectId(String(eventUserId))
                     }
                 ]
             },
@@ -377,12 +382,12 @@ export const unfollowFriend = async (req: Request,res: Response,next: NextFuncti
             {
                 $or: [
                     {
-                        user1: new mongoose.Types.ObjectId(userId),
+                        user1: new mongoose.Types.ObjectId(String(eventUserId)),
                         user2: new mongoose.Types.ObjectId(String(friendId))
                     },
                     {
                         user1: new mongoose.Types.ObjectId(String(friendId)),
-                        user2: new mongoose.Types.ObjectId(userId)
+                        user2: new mongoose.Types.ObjectId(String(eventUserId))
                     }
                 ]
             },
@@ -411,7 +416,7 @@ export const unfollowFriend = async (req: Request,res: Response,next: NextFuncti
 }
 
 export const withdrawFriendRequest = async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
-    const userId = req.user.id;
+    const eventUserId = req.eventUser?.id;
     const { receiverId } = req.query;
 
     if (!receiverId)
@@ -419,7 +424,7 @@ export const withdrawFriendRequest = async (req: Request,res: Response,next: Nex
 
     const deleteRequest = await FriendRequestModel.deleteOne({
         receiver: new mongoose.Types.ObjectId(String(receiverId)),
-        sender: new mongoose.Types.ObjectId(userId)
+        sender: new mongoose.Types.ObjectId(String(eventUserId))
     });
 
     if (!deleteRequest)
@@ -433,7 +438,7 @@ export const withdrawFriendRequest = async (req: Request,res: Response,next: Nex
 
 export const friendProfileById = async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
 
-    const userId = req.user.id;
+    const eventUserId = req.eventUser?.id;
     const { friendId } = req.query;
 
     const friendProfile = await FriendModel.aggregate([
@@ -441,12 +446,12 @@ export const friendProfileById = async (req: Request,res: Response,next: NextFun
             $match: {
                 $or: [
                     {
-                        user1: new mongoose.Types.ObjectId(userId),
+                        user1: new mongoose.Types.ObjectId(String(eventUserId)),
                         user2: new mongoose.Types.ObjectId(String(friendId))
                     },
                     {
                         user1: new mongoose.Types.ObjectId(String(friendId)),
-                        user2: new mongoose.Types.ObjectId(userId)
+                        user2: new mongoose.Types.ObjectId(String(eventUserId))
                     },
                 ]
             }
@@ -455,7 +460,7 @@ export const friendProfileById = async (req: Request,res: Response,next: NextFun
             $project: {
                 friendId: {
                     $cond: {
-                        if: { $eq: ["$user1", new mongoose.Types.ObjectId(userId)] },
+                        if: { $eq: ["$user1", new mongoose.Types.ObjectId(String(eventUserId))] },
                         then: "$user2",
                         else: "$user1"
                     }
@@ -464,7 +469,7 @@ export const friendProfileById = async (req: Request,res: Response,next: NextFun
         },
         {
             $lookup: {
-                from: "users",
+                from: "eventusers",
                 foreignField: "_id",
                 localField: "friendId",
                 as: "user"
@@ -497,18 +502,24 @@ export const friendProfileById = async (req: Request,res: Response,next: NextFun
                 isConnected: true,
                 level: {
                     $cond: {
-                        if: { eq: ["$previousBadgeName", "Parmanu"] },
+                        if: { $eq: ["$previousBadgeName", "Parmanu"] },
                         then: 1,
                         else: {
-                            if: { eq: ["$previousBadgeName", "Nakshatra"] },
-                            then: 2,
-                            else: {
-                                if: { eq: ["$previousBadgeName", "Chandra"] },
-                                then: 3,
+                            $cond: {
+                                if: { $eq: ["$previousBadgeName", "Nakshatra"] },
+                                then: 2,
                                 else: {
-                                    if: { eq: ["$previousBadgeName", "Shani"] },
-                                    then: 4,
-                                    else: 5
+                                    $cond: {
+                                        if: { $eq: ["$previousBadgeName", "Chandra"] },
+                                        then: 3,
+                                        else: {
+                                            $cond: {
+                                                if: { $eq: ["$previousBadgeName", "Shani"] },
+                                                then: 4,
+                                                else: 5
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -520,14 +531,14 @@ export const friendProfileById = async (req: Request,res: Response,next: NextFun
 
     if (!friendProfile.length) {
 
-        const userProfile = await UserModel.aggregate([
+        const userProfile = await EventUserModel.aggregate([
             {
                 $match: { _id: new mongoose.Types.ObjectId(String(friendId)) },
             },
             {
                 $project: {
                     friendId: "$_id",
-                    name: 1,
+                    name: "$name",
                     profileImage: 1,
                     profession: 1,
                     position: 1,
@@ -547,7 +558,7 @@ export const friendProfileById = async (req: Request,res: Response,next: NextFun
         ]);
 
         if (!userProfile.length)
-            throw new AppError("Firend not found", 404);
+            throw new AppError("Friend not found", 404);
         return res.status(200).json({
             success: true,
             friendProfile: userProfile
@@ -562,15 +573,15 @@ export const friendProfileById = async (req: Request,res: Response,next: NextFun
 
 export const addFriendDirect = async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
 
-    const userId = req.user.id;
+    const eventUserId = req.eventUser?.id;
     const { friendId } = req.query;
 
     if (!friendId)
         throw new AppError("FriendId not found", 400);
 
     const [userDetails, friendDetails] = await Promise.all([
-        UserModel.findById(new mongoose.Types.ObjectId(userId)).select("name"),
-        UserModel.findById(new mongoose.Types.ObjectId(String(friendId))).select("name")
+        EventUserModel.findById(eventUserId),
+        EventUserModel.findById(String(friendId))
     ])
 
     if (!userDetails) throw new AppError("User details not found", 401);
@@ -579,12 +590,12 @@ export const addFriendDirect = async (req: Request,res: Response,next: NextFunct
     const existingFriendship = await FriendModel.findOne({
         $or: [
             {
-                user1: new mongoose.Types.ObjectId(userId),
+                user1: new mongoose.Types.ObjectId(String(eventUserId)),
                 user2: new mongoose.Types.ObjectId(String(friendId))
             },
             {
                 user1: new mongoose.Types.ObjectId(String(friendId)),
-                user2: new mongoose.Types.ObjectId(userId)
+                user2: new mongoose.Types.ObjectId(String(eventUserId))
             }
         ]
     });
@@ -594,8 +605,8 @@ export const addFriendDirect = async (req: Request,res: Response,next: NextFunct
     // checking either request earlier made or not, if made the update status to accepted
     const existingRequestPromise = await FriendRequestModel.findOne({
         $or: [
-            { sender: new mongoose.Types.ObjectId(userId), receiver: new mongoose.Types.ObjectId(String(friendId)) },
-            { sender: new mongoose.Types.ObjectId(String(friendId)), receiver: new mongoose.Types.ObjectId(userId) }
+            { sender: new mongoose.Types.ObjectId(String(eventUserId)), receiver: new mongoose.Types.ObjectId(String(friendId)) },
+            { sender: new mongoose.Types.ObjectId(String(friendId)), receiver: new mongoose.Types.ObjectId(String(eventUserId)) }
         ],
     });
 
@@ -605,7 +616,7 @@ export const addFriendDirect = async (req: Request,res: Response,next: NextFunct
     }
     else {
         const newFriendRequested = await FriendRequestModel.create({
-            sender: userId,
+            sender: eventUserId,
             receiver: friendId,
             note: "",
             video: "",
@@ -616,7 +627,7 @@ export const addFriendDirect = async (req: Request,res: Response,next: NextFunct
     }
 
     const friend = await FriendModel.create({
-        user1: new mongoose.Types.ObjectId(userId),
+        user1: new mongoose.Types.ObjectId(String(eventUserId)),
         user2: new mongoose.Types.ObjectId(String(friendId))
     });
 
@@ -624,7 +635,7 @@ export const addFriendDirect = async (req: Request,res: Response,next: NextFunct
         throw new AppError("Failed to add as friend", 500);
 
     const userNotificationData = {
-        userId: userId,
+        userId: String(eventUserId),
         type: NotificationEnum.FRIEND_ADDED_DIRECTLY,
         message: `You and ${friendDetails.name} are now friends by scanning a QR code.`,
         reference: String(friendId)
@@ -634,7 +645,7 @@ export const addFriendDirect = async (req: Request,res: Response,next: NextFunct
         userId: String(friendId),
         type: NotificationEnum.FRIEND_ADDED_DIRECTLY,
         message: `You and ${userDetails.name} are now friends by scanning a QR code.`,
-        reference: userId
+        reference: String(eventUserId)
     }
 
     const [userNotification, friendNotification] = await Promise.all([
@@ -650,7 +661,7 @@ export const addFriendDirect = async (req: Request,res: Response,next: NextFunct
 
 export const userProfileById = async (req: Request,res: Response,next: NextFunction): Promise<Response | void> => {
 
-    const userId = req.user.id;
+    const eventUserId = req.eventUser?.id;
     const { friendId } = req.query;
 
     if (!friendId)
@@ -662,12 +673,12 @@ export const userProfileById = async (req: Request,res: Response,next: NextFunct
             $match: {
                 $or: [
                     {
-                        sender: new mongoose.Types.ObjectId(userId),
+                        sender: new mongoose.Types.ObjectId(String(eventUserId)),
                         receiver: new mongoose.Types.ObjectId(String(friendId))
                     },
                     {
                         sender: new mongoose.Types.ObjectId(String(friendId)),
-                        receiver: new mongoose.Types.ObjectId(userId)
+                        receiver: new mongoose.Types.ObjectId(String(eventUserId))
                     }
                 ]
             }
@@ -677,7 +688,7 @@ export const userProfileById = async (req: Request,res: Response,next: NextFunct
                 _id: 0,
                 friendId: {
                     $cond: {
-                        if: { $eq: ["$sender", new mongoose.Types.ObjectId(userId)] },
+                        if: { $eq: ["$sender", new mongoose.Types.ObjectId(String(eventUserId))] },
                         then: "$receiver",
                         else: "$sender"
                     }
@@ -687,7 +698,7 @@ export const userProfileById = async (req: Request,res: Response,next: NextFunct
                         if: { $eq: ["$status", RequestStatusEnum.PENDING] },
                         then: {
                             $cond: {
-                                if: { $eq: ["$sender", new mongoose.Types.ObjectId(userId)] },
+                                if: { $eq: ["$sender", new mongoose.Types.ObjectId(String(eventUserId))] },
                                 then: "REQUEST_SENT",
                                 else: "REQUEST_RECEIVED"
                             }
@@ -699,7 +710,7 @@ export const userProfileById = async (req: Request,res: Response,next: NextFunct
         },
         {
             $lookup: {
-                from: "users",
+                from: "eventusers",
                 let: { friendId: "$friendId", status: "$friendShipStatus" },
                 pipeline: [
                     {
@@ -710,9 +721,9 @@ export const userProfileById = async (req: Request,res: Response,next: NextFunct
                     {
                         $project: {
                             _id: 0,
-                            friendId: 1,
-                            friendShipStatus: 1,
-                            name: 1,
+                            friendId: "$_id",
+                            friendShipStatus: "$$status",
+                            name: "$name",
                             profileImage: 1,
                             profession: 1,
                             position: 1,
@@ -804,7 +815,7 @@ export const userProfileById = async (req: Request,res: Response,next: NextFunct
     ]);
 
     if (!friendProfile.length) {
-       const userProfile = await UserModel.aggregate([
+       const userProfile = await EventUserModel.aggregate([
             {
                 $match: { _id: new mongoose.Types.ObjectId(String(friendId)) }
             },
@@ -813,7 +824,7 @@ export const userProfileById = async (req: Request,res: Response,next: NextFunct
                     _id: 0,
                     friendId: "$_id",
                     friendShipStatus: "NOT_CONNECTED",
-                    name: 1,
+                    name: "$name",
                     profileImage: 1,
                     profession: 1,
                     position: 1,
@@ -863,17 +874,17 @@ export const userProfileById = async (req: Request,res: Response,next: NextFunct
         ]);
 
         if (!userProfile.length)
-            throw new AppError("Freind not found", 404);
+            throw new AppError("Friend not found", 404);
 
         return res.status(200).json({
-            sucess: true,
+            success: true,
             friendProfile: userProfile
         })
 
     };
 
     return res.status(200).json({
-        sucess: true,
+        success: true,
         friendProfile
     })
 }

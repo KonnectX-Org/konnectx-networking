@@ -76,7 +76,6 @@ export const createUser = async (
         {
           name: data.name,
           email: data.email,
-          // Only basic identity fields
         },
       ],
       { session }
@@ -102,6 +101,8 @@ export const createUser = async (
       {
         userId: user._id,
         eventId: data.eventId,
+        name: data.name,
+        email: data.email,
         contactNumber: data.contactNumber,
         profileImage: profileImage,
         profession: data.profession,
@@ -292,7 +293,6 @@ export const verifyOtp = async (
     return next(new AppError("Invalid or expired OTP", 400));
   }
 
-  // Clear OTP from EventUser
   eventUser.otp = null;
   eventUser.otpExpiry = null;
   await eventUser.save();
@@ -364,7 +364,7 @@ export const UserInfo = async (
     {
       $lookup: {
         from: "friendrequests",
-        localField: "userId",
+        localField: "_id",
         foreignField: "sender",
         as: "requestSentUser",
       },
@@ -385,7 +385,7 @@ export const UserInfo = async (
     {
       $lookup: {
         from: "friendrequests",
-        localField: "userId",
+        localField: "_id",
         foreignField: "receiver",
         as: "requestReceivedUser",
       },
@@ -406,13 +406,13 @@ export const UserInfo = async (
     {
       $lookup: {
         from: "friends",
-        let: { userId: new mongoose.Types.ObjectId(userId) },
+        let: { eventUserId: new mongoose.Types.ObjectId(eventUserId) },
         pipeline: [
           {
             $match: {
               $or: [
-                { user1: new mongoose.Types.ObjectId(userId) },
-                { user2: new mongoose.Types.ObjectId(userId) },
+                { user1: new mongoose.Types.ObjectId(eventUserId) },
+                { user2: new mongoose.Types.ObjectId(eventUserId) },
               ],
             },
           },

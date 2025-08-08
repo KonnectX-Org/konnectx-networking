@@ -13,14 +13,14 @@ interface IRecentSearch extends Document {
 const RecentSearchSchema: Schema<IRecentSearch> = new Schema<IRecentSearch>({
     userId: {
         type: Schema.Types.ObjectId,
-        ref: "User",
+        ref: "EventUser",
         required: true
     },
     searches: [
         {
             searchedUserId: {
                 type: mongoose.Types.ObjectId,
-                ref: "User", 
+                ref: "EventUser", 
                 required: true
             },
             timeStamps: {
@@ -32,13 +32,3 @@ const RecentSearchSchema: Schema<IRecentSearch> = new Schema<IRecentSearch>({
 });
 
 export const RecentSearchModel = mongoose.model<IRecentSearch>("RecentSearch", RecentSearchSchema);
-
-Searches : [
-    {
-        searchedUserId : {
-            type : mongoose.Types.ObjectId,
-            ref : "User",
-            required : true 
-        }
-    }
-]

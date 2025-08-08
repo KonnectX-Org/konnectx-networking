@@ -2,23 +2,24 @@ import { Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
 import AppError from "../../../utils/appError";
 import { RecentSearchModel } from "../models/recentSearchModel";
+import { EventUserModel } from "../../event/models/eventUsersModel";
 
 const SEARCH_LIMIT = 15;
 
 export const addSearchHistory = async (req: Request,res: Response,next: NextFunction) => {
 
-    const userId = req.user?.id;
+    const eventUserId = req.eventUser?.id;
     const { searchedUserId } = req.query;
 
     if (!searchedUserId)
         throw new AppError("Query(searchedUserId) not found", 400);
 
-    let recentSearches = await RecentSearchModel.findOne({ userId: new mongoose.Types.ObjectId(String(userId)) });
+    let recentSearches = await RecentSearchModel.findOne({ userId: new mongoose.Types.ObjectId(String(eventUserId)) });
 
     // user not found then create, else unshift the searches with limits 15
     if (!recentSearches) {
         recentSearches = new RecentSearchModel({
-            userId: new mongoose.Types.ObjectId(userId),
+            userId: new mongoose.Types.ObjectId(String(eventUserId)),
             searches: [
                 {
                     searchedUserId: new mongoose.Types.ObjectId(String(searchedUserId)),
@@ -63,12 +64,12 @@ export const addSearchHistory = async (req: Request,res: Response,next: NextFunc
 
 export const getSearchedUser = async (req: Request,res: Response,next: NextFunction) => {
 
-    const userId = req.user?.id;
+    const eventUserId = req.eventUser?.id;
 
     const recentSearches = await RecentSearchModel.aggregate([
         {
             $match: {
-                userId: new mongoose.Types.ObjectId(userId)
+                userId: new mongoose.Types.ObjectId(String(eventUserId))
             }
         },
         {
@@ -79,23 +80,24 @@ export const getSearchedUser = async (req: Request,res: Response,next: NextFunct
         },
         {
             $lookup: {
-                from: "users",
+                from: "eventusers",
                 localField: "searches.searchedUserId",
                 foreignField: "_id",
-                as: "user"
+                as: "eventUser"
             }
         },
         {
-            $unwind: "$user"
+            $unwind: "$eventUser"
         },
         {
             $project: {
-                _id: "$user._id",
-                name: "$user.name",
-                profession: "$user.profession",
-                position: "$user.position",
-                company: "$user.company",
-                instituteName: "$user.instituteName",
+                _id: "$eventUser._id",
+                name: "$eventUser.name",
+                profession: "$eventUser.profession",
+                position: "$eventUser.position",
+                company: "$eventUser.company",
+                instituteName: "$eventUser.instituteName",
+                profileImage: "$eventUser.profileImage",
                 timeStamps: "$searches.timeStamps"
             }
         }
@@ -113,10 +115,10 @@ export const getSearchedUser = async (req: Request,res: Response,next: NextFunct
 
 export const clearAllSearch = async (req: Request,res: Response,next: NextFunction) => {
 
-    const userId = req.user?.id;
+    const eventUserId = req.eventUser?.id;
 
     const result = await RecentSearchModel.deleteOne({
-        userId: new mongoose.Types.ObjectId(userId)
+        userId: new mongoose.Types.ObjectId(String(eventUserId))
     });
 
     if (result.deletedCount > 0) {
@@ -132,14 +134,14 @@ export const clearAllSearch = async (req: Request,res: Response,next: NextFuncti
 
 export const removeSearchedUser = async (req: Request,res: Response,next: NextFunction) => {
     
-    const userId = req.user?.id;
+    const eventUserId = req.eventUser?.id;
     const { searchedUserId } = req.query;
 
     if (!searchedUserId)
         throw new AppError("Query(searchedUserId) not found", 400);
 
     const result = await RecentSearchModel.updateOne(
-        { userId: new mongoose.Types.ObjectId(userId) },
+        { userId: new mongoose.Types.ObjectId(String(eventUserId)) },
         {
             $pull: {
                 searches: {

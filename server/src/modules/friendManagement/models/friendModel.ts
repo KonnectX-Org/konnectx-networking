@@ -8,12 +8,12 @@ export interface IFriends extends Document {
 const FriendSchema : Schema<IFriends> = new Schema<IFriends>({
   user1:{
     type: Schema.Types.ObjectId,
-    ref:'User',
+    ref:'EventUser',
     required:true,
   },
   user2:{
     type: Schema.Types.ObjectId,
-    ref:'User',
+    ref:'EventUser',
     required:true,
   }
 },{

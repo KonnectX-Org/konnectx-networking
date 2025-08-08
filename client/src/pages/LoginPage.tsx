@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useSnackbar } from "../hooks/SnackbarContext";
 import userApi from "../apis/userApi";
 import {
@@ -11,9 +11,9 @@ import {
 } from "@mui/material";
 
 const LoginPage = () => {
-  const eventId = "6864dd952cf135f217b9e057";
   const { showSnackbar } = useSnackbar();
   const navigate = useNavigate();
+  const { eventId } = useParams();
 
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -31,7 +31,7 @@ const LoginPage = () => {
     try {
       setLoading(true);
       console.log("Sending OTP request..."); // Add this
-      const response = await userApi.post("/user/login", { email });
+      const response = await userApi.post("/user/login", { email, eventId });
       console.log("OTP response:", response); // Add this
       setOtpSent(true);
       showSnackbar("OTP sent to your email", "success");
@@ -66,7 +66,7 @@ const LoginPage = () => {
 
     try {
       setLoading(true);
-      const response = await userApi.post("/user/verify-otp", { email, otp });
+      const response = await userApi.post("/user/verify-otp", { email, otp,eventId });
 
       if (response.data.success) {
         const eventCheck = await userApi.get(

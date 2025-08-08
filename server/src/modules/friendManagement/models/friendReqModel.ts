@@ -15,12 +15,12 @@ export interface IFriendRequest extends Document {
 const FriendRequestSchema: Schema<IFriendRequest> = new Schema<IFriendRequest>({
   sender: {
     type: Schema.Types.ObjectId,
-    ref:'User',
+    ref:'EventUser',
     required: true,
   },
   receiver: {
     type: Schema.Types.ObjectId,
-    ref:'User',
+    ref:'EventUser',
     required: true,
   },
   note:{

@@ -3,17 +3,15 @@ import { Schema, model, Document } from "mongoose";
 export interface IEventUser extends Document {
   userId: Schema.Types.ObjectId;
   eventId: Schema.Types.ObjectId;
+  name: string;
+  email: string;
   isCheckedIn: boolean;
   checkedInAt?: Date;
-
-  // Authentication fields for event-specific login
   refreshToken?: string;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date | null;
   otp?: string | null;
   otpExpiry?: Date | null;
-
-  // Event-specific profile fields (moved from UserModel)
   contactNumber?: string;
   profileImage?: string;
   profession?: string;
@@ -73,6 +71,17 @@ const EventUserSchema = new Schema<IEventUser>(
       ref: "Event",
       required: true,
     },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+    },
     isCheckedIn: {
       type: Boolean,
       default: false,
@@ -80,8 +89,6 @@ const EventUserSchema = new Schema<IEventUser>(
     checkedInAt: {
       type: Date,
     },
-
-    // Authentication fields for event-specific login
     refreshToken: {
       type: String,
     },
@@ -99,8 +106,6 @@ const EventUserSchema = new Schema<IEventUser>(
       type: Date,
       default: null,
     },
-
-    // Event-specific profile fields
     contactNumber: {
       type: String,
       trim: true,
@@ -117,7 +122,7 @@ const EventUserSchema = new Schema<IEventUser>(
       trim: true,
     },
     industry: {
-      type: [String], 
+      type: [String],
       default: [],
       ref: "Industry",
     },

@@ -5,16 +5,16 @@ import AppError from "../../../utils/appError";
 
 export const getNotification = async (req: Request,res: Response,next: NextFunction) => {
     
-    const userId = req.user?.id;
+    const eventUserId = req.eventUser?.id;
     const { cursor, limit = 20 } = req.query;
 
     const notification = await NotificationModel.aggregate([
         {
-            $match: { userId: new mongoose.Types.ObjectId(userId) }
+            $match: { userId: new mongoose.Types.ObjectId(eventUserId) }
         },
         {
             $lookup: {
-                from: "users",
+                from: "eventusers",
                 let: { referenceId: "$reference" },
                 pipeline: [
                     {
@@ -26,7 +26,7 @@ export const getNotification = async (req: Request,res: Response,next: NextFunct
                         $project: {
                             name: 1,
                             profileImage: 1,
-                            professiona: 1,
+                            profession: 1,
                             position: 1,
                         }
                     }
@@ -76,14 +76,17 @@ export const markNotificationRead = async (
     res: Response,
     next: NextFunction
 ) => {
-    const userId = req.user?.id;
+    const eventUserId = req.eventUser?.id;
     const { notificationId } = req.query;
 
     if (!notificationId)
         throw new AppError("Query(notifcatioId) not found", 400);
 
-    const updatedNotification = await NotificationModel.findByIdAndUpdate(
-        new mongoose.Types.ObjectId(String(notificationId)),
+    const updatedNotification = await NotificationModel.findOneAndUpdate(
+        {
+            _id: new mongoose.Types.ObjectId(String(notificationId)),
+            userId: new mongoose.Types.ObjectId(eventUserId) // Ensure user can only update their own notifications
+        },
         {
             $set: {
                 isRead: true
@@ -106,6 +109,7 @@ export const deleteNotification = async (
     res: Response,
     next: NextFunction
 ) => {
+    const eventUserId = req.eventUser?.id;
     const { notificationIds } = req.body;
 
     if (!Array.isArray(notificationIds))
@@ -116,6 +120,7 @@ export const deleteNotification = async (
 
     const result = await NotificationModel.deleteMany({
         _id: { $in: notificationIds },
+        userId: new mongoose.Types.ObjectId(eventUserId) // Ensure user can only delete their own notifications
     });
 
     if (result.deletedCount > 0) {
