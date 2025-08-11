@@ -177,6 +177,26 @@ export const industries = [
     label: "Web3",
     icon: "🌐",
   },
+  {
+    label: "Consulting",
+    icon: "💼",
+  },
+  {
+    label: "Branding",
+    icon: "🖌️",
+  },
+  {
+    label: "Marketing",
+    icon: "📈",
+  },
+  {
+    label: "Health and Wellness",
+    icon: "💪",
+  },
+  {
+    label: "Beverage",
+    icon: "🥤",
+  },
 ];
 
 // Form field for getting user industries

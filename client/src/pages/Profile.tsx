@@ -330,6 +330,15 @@ const Profile = () => {
     }
   };
 
+  // Temporary Level Mapper
+  const levelMapper = {
+    Parmanu: "Level 1",
+    Nakshatra: "Level 2",
+    Chandra: "Level 3",
+    Shani: "Level 4",
+    Surya: "Level 5",
+  };
+
   return (
     <div className="w-full h-full">
       <Modal open={isInterestModalOpen}>
@@ -420,7 +429,11 @@ const Profile = () => {
           <div className="w-full bg-white p-3 space-y-3 rounded-lg">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-darkBg">
-                {userLevelData?.badgeName}
+                {userLevelData?.badgeName
+                  ? levelMapper[
+                      userLevelData.badgeName as keyof typeof levelMapper
+                    ]
+                  : "Level 1"}
               </p>
               <p className="text-[10px] text-darkBg">
                 Connections Made : {user?.connections}

@@ -36,7 +36,7 @@ const App = () => {
         setUser(userData);
         setUserLevelData(response.data.userLevelData);
 
-        if (!response.data.userLevelData.badgeSplashRead) navigate("/levelup");
+        // if (!response.data.userLevelData.badgeSplashRead) navigate("/levelup");
       }
     } catch (e) {
       // Don't redirect if we're on the login page
