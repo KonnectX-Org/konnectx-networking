@@ -22,12 +22,22 @@ export class EmailService {
   }
 
   public async sendEmail(options: SendEmailOptions): Promise<void> {
-    const response = await this.resend.emails.send({
-      from: `KonnectX <${process.env.EMAIL_FROM}>`,
-      to: options.to,
-      subject: options.subject,
-      html: options.html,
-    });
-    console.log("Email sent successfully:", response);
+    try {
+      const response = await this.resend.emails.send({
+        from: `KonnectX <${process.env.EMAIL_FROM}>`,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+      });
+      
+      if (response.error) {
+        throw new Error(`Failed to send email: ${response.error.name} - ${response.error.message}`); 
+      }
+      
+      console.log("Email sent successfully:", response);
+    } catch (error) {
+      console.error("Error sending email:", error);
+      throw new Error(`Failed to send email: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }

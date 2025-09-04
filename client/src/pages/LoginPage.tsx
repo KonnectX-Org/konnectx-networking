@@ -2,13 +2,6 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSnackbar } from "../hooks/SnackbarContext";
 import userApi from "../apis/userApi";
-import {
-  TextField,
-  Button,
-  Box,
-  Typography,
-  CircularProgress,
-} from "@mui/material";
 
 const LoginPage = () => {
   const { showSnackbar } = useSnackbar();
@@ -90,47 +83,58 @@ const LoginPage = () => {
   };
 
   return (
-    <Box sx={{ maxWidth: 400, mx: "auto", mt: 2, p: 3 }}>
-      {/* <Typography variant="h4" gutterBottom>
-        Login
-      </Typography> */}
+    <div className="max-w-md mx-auto mt-2 p-3">
       <h1 className="text-darkBg text-3xl font-bold">Login</h1>
-      <p className="text-darkBg text-base mb-4 ">Login to access the event</p>
+      <p className="text-darkBg text-base mb-4">Login to access the event</p>
 
-      <TextField
-        fullWidth
-        label="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        margin="normal"
-        disabled={otpSent}
-        sx={{ mb: 2 }}
-      />
-
-      {otpSent && (
-        <TextField
-          fullWidth
-          label="OTP"
-          value={otp}
-          onChange={(e) =>
-            setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
-          }
-          margin="normal"
-          sx={{ mb: 2 }}
-          inputProps={{
-            inputMode: "numeric",
-            pattern: "[0-9]*",
-          }}
+      {/* Email Input */}
+      <div className="w-full mb-4">
+        <label className="block text-sm font-medium text-darkBg mb-2">
+          Email
+        </label>
+        <input
+          type="email"
+          value={email}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+          disabled={otpSent}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+          placeholder="Enter your email address"
         />
+      </div>
+
+      {/* OTP Input */}
+      {otpSent && (
+        <div className="w-full mb-4">
+          <label className="block text-sm font-medium text-darkBg mb-2">
+            OTP
+          </label>
+          <input
+            type="text"
+            value={otp}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+            }
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="Enter 6-digit OTP"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={6}
+          />
+        </div>
       )}
 
+      {/* Submit Button */}
       <button
         onClick={otpSent ? handleVerifyOtp : handleSendOtp}
         disabled={loading}
-        className="w-full bg-darkBg text-white py-2 px-4 rounded"
+        className={`w-full bg-darkBg text-white py-4 px-4 rounded-md font-bold text-sm ${
+          loading ? "opacity-60 cursor-not-allowed" : "opacity-100"
+        }`}
       >
         {loading ? (
-          <CircularProgress size={24} color="inherit" />
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+          </div>
         ) : otpSent ? (
           "Verify OTP"
         ) : (
@@ -138,21 +142,26 @@ const LoginPage = () => {
         )}
       </button>
 
+      {/* Resend OTP Section */}
       {otpSent && (
-        <Box sx={{ mt: 2, textAlign: "center" }}>
-          <Typography variant="body2" sx={{ mb: 1 }}>
+        <div className="mt-4 text-center">
+          <p className="text-sm text-gray-600 mb-2">
             Didn't receive OTP?
-          </Typography>
-          <Button
-            variant="text"
+          </p>
+          <button
             onClick={handleResendOtp}
             disabled={resendDisabled || loading}
+            className={`text-blue-600 underline text-sm ${
+              resendDisabled || loading 
+                ? "opacity-50 cursor-not-allowed" 
+                : "hover:text-blue-800 cursor-pointer"
+            }`}
           >
             Resend OTP {resendDisabled && `(${resendTimer}s)`}
-          </Button>
-        </Box>
+          </button>
+        </div>
       )}
-    </Box>
+    </div>
   );
 };
 

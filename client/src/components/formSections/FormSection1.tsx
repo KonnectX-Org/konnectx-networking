@@ -2,7 +2,7 @@ import { PhoneInput } from "react-international-phone";
 import "react-international-phone/style.css";
 import screwClockIcon from "../../assets/icons/screwClockIcon.svg";
 import { useSnackbar } from "../../hooks/SnackbarContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import "./FormSection1.css";
 
 // Form for getting the username
@@ -29,6 +29,7 @@ const FormSection1 = ({
 }) => {
   const { showSnackbar } = useSnackbar();
   const navigate = useNavigate();
+  const { eventId } = useParams();
 
   const validAndGoToNext = () => {
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -147,7 +148,7 @@ const FormSection1 = ({
             <span>Existing User? </span>
             <span
               className="text-blue-600 underline cursor-pointer"
-              onClick={() => navigate("/login/6864dd952cf135f217b9e057")}
+              onClick={() => navigate(`/login/${eventId}`)}
             >
               Login
             </span>

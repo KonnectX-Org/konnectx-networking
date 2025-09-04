@@ -6,6 +6,9 @@
   font-family: "Inter", serif;
   height: 100%;
 }
+* {
+  font-family: "Inter", serif;
+}
 
 body {
   max-width: 480px;

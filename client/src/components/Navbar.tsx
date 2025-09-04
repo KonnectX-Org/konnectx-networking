@@ -54,8 +54,9 @@ const Navbar = () => {
 
     if (paths[1] == "connect") setCurrentTab(0);
     else if (paths[1] == "network") setCurrentTab(1);
-    else if (paths[1] == "profile") setCurrentTab(2);
-  }, [location]);
+    else if (paths[1] == "requirements") setCurrentTab(2);
+    else if (paths[1] == "profile") setCurrentTab(3);
+  }, [location, eventId]);
 
   return (
     <div className="w-full h-fit py-2 bg-grey01 flex items-center justify-evenly border-t border-t-lightGrey">
@@ -80,12 +81,20 @@ const Navbar = () => {
         setCurrentTab={setCurrentTab}
       />
       <NavButton
+        icon={"material-symbols-light:business-messages-outline-rounded"}
+        title="Requirements"
+        toRoute={`/requirements`}
+        isActive={currentTab == 2}
+        tabNo={2}
+        setCurrentTab={setCurrentTab}
+      />
+      <NavButton
         icon={"carbon:user-profile"}
         title="Profile"
         toRoute={`/profile`}
-        isActive={currentTab == 2}
+        isActive={currentTab == 3}
         setCurrentTab={setCurrentTab}
-        tabNo={2}
+        tabNo={3}
       />
     </div>
   );

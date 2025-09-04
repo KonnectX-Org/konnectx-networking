@@ -227,7 +227,7 @@ export const loginUser = async (
     // Check if user is registered for this event
     const eventUser = await EventUserModel.findOne({
       userId: user._id,
-      eventId: new mongoose.Types.ObjectId(eventId),
+      eventId: eventId,
     });
 
     if (!eventUser) {

@@ -1,4 +1,4 @@
-import { Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import FormPage from "./pages/FormPage";
 import LoginPage from "./pages/LoginPage";
 import MainPage from "./pages/MainPage";
@@ -17,6 +17,12 @@ import { UserProvider } from "./hooks/UserContext";
 import { userI, userLevelDataI } from "./types/userTypes";
 import QRConnecting from "./pages/QRConnecting";
 import ConnectionProfile from "./pages/ConnectionProfile";
+import Requirements from "./pages/requirements/Requirements";
+import RequirementDescription from "./pages/requirements/RequirementDescription";
+import CreateRequirement from "./pages/requirements/CreateRequirement";
+import RequirementsInbox from "./pages/requirements/Inbox";
+import RequirementChats from "./pages/requirements/RequirementChats";
+import Chat from "./pages/requirements/Chat";
 
 const App = () => {
   const [user, setUser] = useState<userI | undefined>(undefined);
@@ -24,7 +30,6 @@ const App = () => {
     userLevelDataI | undefined
   >(undefined);
 
-  const navigate = useNavigate();
   const location = useLocation();
 
   const fetchUser = async () => {
@@ -32,7 +37,7 @@ const App = () => {
       const response = await userApi.get("/user/");
 
       if (response.status == 200) {
-        const userData={...response.data.eventUser, ...response.data.user};
+        const userData = { ...response.data.eventUser, ...response.data.user };
         setUser(userData);
         setUserLevelData(response.data.userLevelData);
 
@@ -41,7 +46,7 @@ const App = () => {
     } catch (e) {
       // Don't redirect if we're on the login page
       if (!location.pathname.startsWith("/login")) {
-        navigate("/form/6864dd952cf135f217b9e057");
+        // navigate("/form/6864dd952cf135f217b9e057");
       }
     }
   };
@@ -75,6 +80,21 @@ const App = () => {
             <Route path="/requests/:rtype" element={<RequestsPage />} />
             <Route path="/network" element={<MyNetworkPage />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/requirements" element={<Requirements />} />
+            <Route
+              path="/requirements/create"
+              element={<CreateRequirement />}
+            />
+            <Route path="/requirements/inbox" element={<RequirementsInbox />} />
+            <Route
+              path="/requirements/:id"
+              element={<RequirementDescription />}
+            />
+            <Route
+              path="/requirements/allChats/:requirementId/"
+              element={<RequirementChats />}
+            />
+            <Route path="/chat/:chatId" element={<Chat />} />
             <Route path="/profile/:id" element={<ConnectionProfile />} />
           </Route>
 
@@ -84,7 +104,7 @@ const App = () => {
           <Route path="/levelup" element={<LevelUpPage />} />
 
           {/* Default redirect */}
-          <Route path="/" element={<FormPage />} />
+          {/* <Route path="/" element={<FormPage />} /> */}
         </Routes>
       </UserProvider>
     </>

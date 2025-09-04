@@ -13,7 +13,6 @@ import logger from "./utils/logger";
 // socket imports
 import { Server } from "socket.io";
 import http from "http";
-import { initializeSocket } from "./modules/reqWall/sockets/socketHandler";
 
 
 
@@ -33,7 +32,6 @@ const io = new Server(server, {
   },
 });
 // Initialize Socket.IO handlers
-initializeSocket(io);
 
 
 
