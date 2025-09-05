@@ -258,8 +258,8 @@ const Chat = () => {
 
   return (
     <div
-      className="flex flex-col bg-gray-50"
-      style={{ height: window.innerHeight - 60 }}
+      className="h-full flex flex-col bg-gray-50"
+      // style={{ height: window.innerHeight - 60 }}
     >
       {/* Header */}
       <div className="bg-white px-4 py-3 border-b border-gray-200 flex items-center space-x-3">

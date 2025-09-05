@@ -85,7 +85,7 @@ const RequirementDescription = () => {
     );
   }
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-full flex flex-col">
       {/* Header */}
       <div className="bg-grey01 px-3 py-5 flex-shrink-0">
         <div className="flex items-center justify-between">
@@ -201,7 +201,7 @@ const RequirementDescription = () => {
       {/* Fixed Button at Bottom */}
       {!requirement.isUserPosted &&
         (!requirement.myResponse ? (
-          <div className="flex-shrink-0 px-4 mb-16">
+          <div className="flex-shrink-0 px-4 mb-2">
             <button
               onClick={() => setIsModalOpen(true)}
               className="bg-black rounded-xl text-white w-full p-4"
@@ -210,7 +210,7 @@ const RequirementDescription = () => {
             </button>
           </div>
         ) : (
-          <div className="flex-shrink-0 px-4 mb-16">
+          <div className="flex-shrink-0 px-4 mb-2">
             <button
               onClick={() => navigate(`/chat/${requirement.myResponse?._id}`)}
               className="bg-black rounded-xl text-white w-full p-4"

@@ -21,7 +21,7 @@ const LayoutWithOutHeader = () => {
     <div
       className="w-full flex flex-col flex-1 bg-whiteBG"
       style={{
-        minHeight: windowHeight,
+        // minHeight: windowHeight,
         height: windowHeight,
       }}
     >
