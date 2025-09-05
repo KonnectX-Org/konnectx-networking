@@ -268,7 +268,6 @@ const RequirementsInbox = () => {
                     requirementId={item.requirementId}
                     title={item.title}
                     biddersCount={item.biddersCount}
-                    lastActivity={item.lastActivity}
                     unreadCount={item.unreadCount}
                     postedBy={item.postedBy!}
                     createdAt={item.createdAt}

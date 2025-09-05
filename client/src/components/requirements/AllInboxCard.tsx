@@ -5,7 +5,6 @@ interface AllInboxCardProps {
   requirementId: string;
   title: string;
   biddersCount: number;
-  lastActivity: string;
   unreadCount: number;
   postedBy: {
     id: string;
@@ -18,7 +17,6 @@ interface AllInboxCardProps {
 const AllInboxCard = ({
   chatId,
   title,
-  lastActivity,
   unreadCount,
   postedBy,
 }: AllInboxCardProps) => {

@@ -20,6 +20,7 @@ const RequirementDescription = () => {
 
   const handleSubmitBid = async (message: string, files: File[]) => {
     try {
+      files // Temp usage
       // For now, we'll just send the message without files
       // File upload functionality can be added later
       const response = await userApi.post("/user/requirements/submit-bid", {
