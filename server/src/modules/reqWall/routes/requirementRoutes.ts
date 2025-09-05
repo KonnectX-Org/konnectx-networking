@@ -15,6 +15,7 @@ import {
   fetchInboxAll,
   fetchInboxPostedByMe,
   fetchRequirementChats,
+  getTotalUnreadCounts,
 } from "../controllers/inboxController";
 
 const router = Router();
@@ -27,6 +28,7 @@ router.post("/submit-bid", submitBid);
 
 router.get("/inbox/posted-by-me", fetchInboxPostedByMe);
 router.get("/inbox/all", fetchInboxAll);
+router.get("/inbox/unread-counts", getTotalUnreadCounts);
 router.get("/:requirementId/chats", fetchRequirementChats);
 
 // Chat message routes

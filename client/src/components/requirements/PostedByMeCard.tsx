@@ -19,6 +19,7 @@ const PostedByMeCard = ({
   requirementId,
   title,
   biddersCount,
+  unreadCount,
 }: PostedByMeCardProps) => {
   const navigate = useNavigate();
 
@@ -36,15 +37,15 @@ const PostedByMeCard = ({
             <h3 className="font-medium text-darkBg">
               {title}
             </h3>
-            {biddersCount > 0 && (
-              <span className="bg-primary text-white text-xs px-2 py-1 rounded-full">
-                {biddersCount}
+            {unreadCount > 0 && (
+              <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center ml-2">
+                {unreadCount}
               </span>
             )}
           </div>
           
           <p className="text-sm text-gray-500 mt-1">
-            {biddersCount} member{biddersCount !== 1 ? 's' : ''}
+            {biddersCount} member{biddersCount !== 1 ? 's' : ''} • {unreadCount} unread
           </p>
         </div>
         

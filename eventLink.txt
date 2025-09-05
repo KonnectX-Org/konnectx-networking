@@ -1,1 +1,4 @@
 http://localhost:5173/form/68b19dc3b4989bb7cc92f363
+
+
+Check my realtime chat implementation logic, there are few issues, first of all when we send the message, it is not being shown that is it the currnet user or the opposite person, that is handeled actually in the controller you can take reference from there, and I will need the pending message everywhere, that is on the below navbar in requirements tab, on the mail icon of inbox, then in if I am on postedByMe and pending message is in all, then there a pending message mark, and then in respective chat, and dont show all the number of chats in the outer for the postedByMe, we will only show pending messages which are unread, so do a complete audit and in one go fix everything

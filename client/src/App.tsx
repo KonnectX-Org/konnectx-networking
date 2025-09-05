@@ -14,6 +14,8 @@ import QRPage from "./pages/QRPage";
 import userApi from "./apis/userApi";
 import { useEffect, useState } from "react";
 import { UserProvider } from "./hooks/UserContext";
+import { SocketProvider } from "./hooks/SocketContext";
+import { UnreadCountProvider } from "./hooks/UnreadCountContext";
 import { userI, userLevelDataI } from "./types/userTypes";
 import QRConnecting from "./pages/QRConnecting";
 import ConnectionProfile from "./pages/ConnectionProfile";
@@ -63,49 +65,53 @@ const App = () => {
         setUser={setUser}
         setUserLevelData={setUserLevelData}
       >
-        <Routes>
-          {/* Public routes */}
-          <Route path="/login/:eventId" element={<LoginPage />} />
-          <Route path="/form/:eventId" element={<FormPage />} />
+        <SocketProvider>
+          <UnreadCountProvider>
+            <Routes>
+            {/* Public routes */}
+            <Route path="/login/:eventId" element={<LoginPage />} />
+            <Route path="/form/:eventId" element={<FormPage />} />
 
-          {/* Authenticated routes with header */}
-          <Route element={<LayoutWithHeader />}>
-            <Route path="/home" element={<MainPage />} />
-            <Route path="/connect/:eventId" element={<ConnectPage />} />
-          </Route>
+            {/* Authenticated routes with header */}
+            <Route element={<LayoutWithHeader />}>
+              <Route path="/home" element={<MainPage />} />
+              <Route path="/connect/:eventId" element={<ConnectPage />} />
+            </Route>
 
-          {/* Authenticated routes without header */}
-          <Route element={<LayoutWithOutHeader />}>
-            <Route path="/notifications" element={<NotificatonsPage />} />
-            <Route path="/requests/:rtype" element={<RequestsPage />} />
-            <Route path="/network" element={<MyNetworkPage />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/requirements" element={<Requirements />} />
-            <Route
-              path="/requirements/create"
-              element={<CreateRequirement />}
-            />
-            <Route path="/requirements/inbox" element={<RequirementsInbox />} />
-            <Route
-              path="/requirements/:id"
-              element={<RequirementDescription />}
-            />
-            <Route
-              path="/requirements/allChats/:requirementId/"
-              element={<RequirementChats />}
-            />
-            <Route path="/chat/:chatId" element={<Chat />} />
-            <Route path="/profile/:id" element={<ConnectionProfile />} />
-          </Route>
+            {/* Authenticated routes without header */}
+            <Route element={<LayoutWithOutHeader />}>
+              <Route path="/notifications" element={<NotificatonsPage />} />
+              <Route path="/requests/:rtype" element={<RequestsPage />} />
+              <Route path="/network" element={<MyNetworkPage />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/requirements" element={<Requirements />} />
+              <Route
+                path="/requirements/create"
+                element={<CreateRequirement />}
+              />
+              <Route path="/requirements/inbox" element={<RequirementsInbox />} />
+              <Route
+                path="/requirements/:id"
+                element={<RequirementDescription />}
+              />
+              <Route
+                path="/requirements/allChats/:requirementId/"
+                element={<RequirementChats />}
+              />
+              <Route path="/chat/:chatId" element={<Chat />} />
+              <Route path="/profile/:id" element={<ConnectionProfile />} />
+            </Route>
 
-          {/* Other routes */}
-          <Route path="/qr" element={<QRPage />} />
-          <Route path="/qr-connect/:friendId" element={<QRConnecting />} />
-          <Route path="/levelup" element={<LevelUpPage />} />
+            {/* Other routes */}
+            <Route path="/qr" element={<QRPage />} />
+            <Route path="/qr-connect/:friendId" element={<QRConnecting />} />
+            <Route path="/levelup" element={<LevelUpPage />} />
 
-          {/* Default redirect */}
-          {/* <Route path="/" element={<FormPage />} /> */}
-        </Routes>
+            {/* Default redirect */}
+            {/* <Route path="/" element={<FormPage />} /> */}
+          </Routes>
+          </UnreadCountProvider>
+        </SocketProvider>
       </UserProvider>
     </>
   );

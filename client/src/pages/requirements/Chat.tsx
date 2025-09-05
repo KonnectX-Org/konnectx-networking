@@ -2,6 +2,7 @@ import { Icon } from "@iconify/react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useUser } from "../../hooks/UserContext";
+import { useSocket } from "../../hooks/SocketContext";
 import userApi from "../../apis/userApi";
 import MessageBubble from "../../components/requirements/MessageBubble";
 import MessageInput from "../../components/requirements/MessageInput";
@@ -35,6 +36,15 @@ const Chat = () => {
   const navigate = useNavigate();
   const { chatId } = useParams();
   const { user } = useUser();
+  const { 
+    joinChat, 
+    leaveChat, 
+    sendMessage: sendSocketMessage, 
+    markAsRead: markSocketAsRead,
+    onNewMessage,
+    offNewMessage,
+    isConnected 
+  } = useSocket();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [sendingMessage, setSendingMessage] = useState<boolean>(false);
@@ -45,6 +55,8 @@ const Chat = () => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const fetchMessagesRef = useRef<((cursor?: string | null, isLoadMore?: boolean) => Promise<void>) | null>(null);
+  const markAsReadRef = useRef<(() => Promise<void>) | null>(null);
 
   // Scroll to bottom for new messages
   const scrollToBottom = () => {
@@ -103,22 +115,28 @@ const Chat = () => {
     }
   };
 
-  // Send message
+  // Send message - now with real-time support
   const handleSendMessage = async (messageText: string) => {
     if (!chatId || !user) return;
 
     try {
       setSendingMessage(true);
 
-      const response = await userApi.post(
-        `/user/requirements/chats/${chatId}/messages`,
-        { message: messageText }
-      );
+      // Send via Socket.IO if connected, otherwise fallback to HTTP
+      if (isConnected) {
+        sendSocketMessage(chatId, messageText);
+      } else {
+        // Fallback to HTTP API
+        const response = await userApi.post(
+          `/user/requirements/chats/${chatId}/messages`,
+          { message: messageText }
+        );
 
-      if (response.data.success) {
-        const newMessage = response.data.data;
-        setMessages((prev) => [...prev, newMessage]);
-        scrollToBottom();
+        if (response.data.success) {
+          const newMessage = response.data.data;
+          setMessages((prev) => [...prev, newMessage]);
+          scrollToBottom();
+        }
       }
     } catch (err: any) {
       setError(err.response?.data?.message || "Failed to send message");
@@ -127,24 +145,77 @@ const Chat = () => {
     }
   };
 
-  // Mark messages as read when component mounts
+  // Mark messages as read when component mounts and when leaving
   const markAsRead = useCallback(async () => {
     if (!chatId) return;
 
     try {
-      await userApi.patch(`/user/requirements/chats/${chatId}/mark-read`);
+      // Use socket if connected, otherwise HTTP
+      if (isConnected) {
+        markSocketAsRead(chatId);
+      } else {
+        await userApi.patch(`/user/requirements/chats/${chatId}/mark-read`);
+      }
     } catch (err) {
       console.error("Failed to mark messages as read:", err);
     }
-  }, [chatId]);
+  }, [chatId, isConnected, markSocketAsRead]);
+
+  // Update refs whenever functions change
+  useEffect(() => {
+    fetchMessagesRef.current = fetchMessages;
+    markAsReadRef.current = markAsRead;
+  }, [fetchMessages, markAsRead]);
+
+  // Socket event handlers for real-time updates
+  useEffect(() => {
+    if (!chatId) return;
+
+    const handleNewMessage = (data: { chatId: string; message: Message }) => {
+      if (data.chatId === chatId) {
+        setMessages((prev) => {
+          // Check if message already exists to avoid duplicates
+          const messageExists = prev.some(msg => msg._id === data.message._id);
+          if (messageExists) return prev;
+          
+          // Backend already sets isOwnMessage correctly, don't override it
+          const updatedMessage = data.message;
+          
+          return [...prev, updatedMessage];
+        });
+        
+        // Scroll to bottom for new messages
+        setTimeout(scrollToBottom, 100);
+      }
+    };
+
+    // Subscribe to new messages
+    onNewMessage(handleNewMessage);
+
+    // Cleanup on unmount
+    return () => {
+      offNewMessage(handleNewMessage);
+    };
+  }, [chatId, onNewMessage, offNewMessage, user?._id]);
+
+  // Join/leave chat rooms
+  useEffect(() => {
+    if (chatId && isConnected) {
+      joinChat(chatId);
+      
+      return () => {
+        leaveChat(chatId);
+      };
+    }
+  }, [chatId, isConnected, joinChat, leaveChat]);
 
   // Initial fetch and mark as read
   useEffect(() => {
-    if (chatId) {
-      fetchMessages();
-      markAsRead();
+    if (chatId && fetchMessagesRef.current && markAsReadRef.current) {
+      fetchMessagesRef.current();
+      markAsReadRef.current();
     }
-  }, [chatId, fetchMessages, markAsRead]);
+  }, [chatId]);
 
   // Scroll to bottom when new messages arrive (not for load more)
   useEffect(() => {

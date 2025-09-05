@@ -2,6 +2,8 @@ import { Icon } from "@iconify/react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback } from "react";
 import userApi from "../../apis/userApi";
+import { useSocket } from "../../hooks/SocketContext";
+import { useUnreadCount } from "../../hooks/UnreadCountContext";
 import PostedByMeCard from "../../components/requirements/PostedByMeCard";
 import AllInboxCard from "../../components/requirements/AllInboxCard";
 import { Search } from "lucide-react";
@@ -37,6 +39,8 @@ interface PaginationInfo {
 
 const RequirementsInbox = () => {
   const navigate = useNavigate();
+  const { unreadCounts, refreshUnreadCounts } = useUnreadCount();
+  const { onUnreadCountUpdate, offUnreadCountUpdate } = useSocket();
   const [inboxType, setInboxType] = useState<"postedByMe" | "all">(
     "postedByMe"
   );
@@ -54,6 +58,7 @@ const RequirementsInbox = () => {
   });
   const [hasMore, setHasMore] = useState(true);
   const observer = useRef<IntersectionObserver>();
+  const fetchInboxDataRef = useRef<((page?: number, reset?: boolean) => Promise<void>) | null>(null);
 
   const lastItemRef = useCallback(
     (node: HTMLDivElement) => {
@@ -69,7 +74,7 @@ const RequirementsInbox = () => {
     [loading, hasMore]
   );
 
-  const fetchInboxData = async (page: number = 1, reset: boolean = false) => {
+  const fetchInboxData = useCallback(async (page: number = 1, reset: boolean = false) => {
     if (loading) return;
 
     try {
@@ -94,23 +99,67 @@ const RequirementsInbox = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [inboxType, loading]);
+
+  // Update the ref whenever the function changes
+  useEffect(() => {
+    fetchInboxDataRef.current = fetchInboxData;
+  }, [fetchInboxData]);
 
   useEffect(() => {
     setIsTypeChanging(true);
     setInboxItems([]);
     setPagination((prev) => ({ ...prev, page: 1 }));
     setHasMore(true);
-    fetchInboxData(1, true).finally(() => {
-      setIsTypeChanging(false);
-    });
+    if (fetchInboxDataRef.current) {
+      fetchInboxDataRef.current(1, true).finally(() => {
+        setIsTypeChanging(false);
+      });
+    }
   }, [inboxType]);
 
+  // Refresh unread counts only once when component mounts
   useEffect(() => {
-    if (pagination.page > 1) {
-      fetchInboxData(pagination.page);
+    refreshUnreadCounts();
+  }, []); // Remove refreshUnreadCounts from dependencies to prevent infinite calls
+
+  useEffect(() => {
+    if (pagination.page > 1 && fetchInboxDataRef.current) {
+      fetchInboxDataRef.current(pagination.page);
     }
   }, [pagination.page]);
+
+  // Handle real-time unread count updates
+  useEffect(() => {
+    const handleUnreadCountUpdate = (data: { 
+      chatId: string; 
+      postedByCount: number; 
+      bidderCount: number; 
+    }) => {
+      setInboxItems(prevItems => 
+        prevItems.map(item => {
+          if (item.chatId === data.chatId) {
+            // Update unread count based on current user's role
+            const unreadCount = inboxType === "postedByMe" 
+              ? data.postedByCount 
+              : data.bidderCount;
+            
+            return {
+              ...item,
+              unreadCount
+            };
+          }
+          return item;
+        })
+      );
+    };
+
+    onUnreadCountUpdate(handleUnreadCountUpdate);
+
+    return () => {
+      offUnreadCountUpdate(handleUnreadCountUpdate);
+    };
+  }, [onUnreadCountUpdate, offUnreadCountUpdate, inboxType]);
 
   const filteredItems = inboxItems.filter((item) =>
     item.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -159,11 +208,22 @@ const RequirementsInbox = () => {
               onChange={(e) =>
                 setInboxType(e.target.value as "postedByMe" | "all")
               }
-              className="appearance-none bg-black text-white px-4 py-2 rounded-full pr-8 focus:outline-none cursor-pointer"
+              className="appearance-none bg-black text-white px-4 py-2 rounded-full pr-8 focus:outline-none cursor-pointer relative"
             >
-              <option value="postedByMe">Posted by Me</option>
-              <option value="all">All</option>
+              <option value="postedByMe">
+                Posted by Me {unreadCounts.postedByMeUnread > 0 && `(${unreadCounts.postedByMeUnread})`}
+              </option>
+              <option value="all">
+                All {unreadCounts.allUnread > 0 && `(${unreadCounts.allUnread})`}
+              </option>
             </select>
+            {/* Show cross-tab notification badge */}
+            {((inboxType === "postedByMe" && unreadCounts.allUnread > 0) || 
+              (inboxType === "all" && unreadCounts.postedByMeUnread > 0)) && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                !
+              </span>
+            )}
             <Icon
               icon="solar:alt-arrow-down-linear"
               width="16"

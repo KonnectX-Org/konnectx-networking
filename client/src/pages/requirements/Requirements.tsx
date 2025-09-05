@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback, useRef } from "react";
 import RequirementCard from "../../components/requirements/RequirementCard";
 import userApi from "../../apis/userApi";
+import { useUnreadCount } from "../../hooks/UnreadCountContext";
 import {
   RequirementI,
   RequirementsResponseI,
@@ -12,6 +13,7 @@ import {
 
 const Requirements = () => {
   const navigate = useNavigate();
+  const { unreadCounts } = useUnreadCount();
   const [activeTab, setActiveTab] = useState<"all" | "postedByMe">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [requirements, setRequirements] = useState<RequirementI[]>([]);
@@ -138,8 +140,18 @@ const Requirements = () => {
               Create New
               <CirclePlus size={16} />
             </button>
-            <button className="bg-black text-white flex items-center p-2 rounded-full text-sm gap-2" onClick={()=>navigate("/requirements/inbox")}>
+            <button
+              className="bg-black text-white flex items-center p-2 rounded-full text-sm gap-2 relative"
+              onClick={() => navigate("/requirements/inbox")}
+            >
               <Mail strokeWidth={1} size={22} />
+              {unreadCounts.totalUnread > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center min-w-[20px]">
+                  {unreadCounts.totalUnread > 99
+                    ? "99+"
+                    : unreadCounts.totalUnread}
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -167,7 +179,7 @@ const Requirements = () => {
         <div className="flex gap-2">
           <button
             onClick={() => setActiveTab("all")}
-            className={`px-2 flex-1 min-w-max py-3 rounded-full text-sm font-medium transition-colors ${
+            className={`px-2 flex-1 min-w-max py-3 rounded-full text-sm font-medium transition-colors relative ${
               activeTab === "all"
                 ? "bg-black text-white"
                 : "bg-white text-gray-600"
@@ -177,7 +189,7 @@ const Requirements = () => {
           </button>
           <button
             onClick={() => setActiveTab("postedByMe")}
-            className={`px-2 flex-1 py-3 min-w-max rounded-full text-sm font-medium transition-colors ${
+            className={`px-2 flex-1 py-3 min-w-max rounded-full text-sm font-medium transition-colors relative ${
               activeTab === "postedByMe"
                 ? "bg-black text-white"
                 : "bg-white text-gray-600"
@@ -230,7 +242,9 @@ const Requirements = () => {
         {/* No more data indicator */}
         {!hasMoreData && requirements.length > 0 && (
           <div className="text-center py-4">
-            <p className="text-gray-500 text-sm">No more requirements to load</p>
+            <p className="text-gray-500 text-sm">
+              No more requirements to load
+            </p>
           </div>
         )}
       </div>

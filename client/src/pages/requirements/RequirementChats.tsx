@@ -2,6 +2,7 @@ import { Icon } from "@iconify/react";
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import userApi from "../../apis/userApi";
+import { useSocket } from "../../hooks/SocketContext";
 
 interface ChatData {
   chatId: string;
@@ -29,6 +30,7 @@ interface RequirementChatsResponse {
 const RequirementChats = () => {
   const navigate = useNavigate();
   const { requirementId } = useParams();
+  const { onUnreadCountUpdate, offUnreadCountUpdate } = useSocket();
   const [chats, setChats] = useState<ChatData[]>([]);
   const [requirementTitle, setRequirementTitle] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
@@ -63,6 +65,35 @@ const RequirementChats = () => {
 
     fetchChats();
   }, [requirementId]);
+
+  // Handle real-time unread count updates
+  useEffect(() => {
+    const handleUnreadCountUpdate = (data: { 
+      chatId: string; 
+      postedByCount: number; 
+      bidderCount: number; 
+    }) => {
+      setChats(prevChats => 
+        prevChats.map(chat => {
+          if (chat.chatId === data.chatId) {
+            // For requirement chats, we show the poster's unread count
+            // (since this is showing chats for a requirement posted by current user)
+            return {
+              ...chat,
+              unreadCount: data.postedByCount
+            };
+          }
+          return chat;
+        })
+      );
+    };
+
+    onUnreadCountUpdate(handleUnreadCountUpdate);
+
+    return () => {
+      offUnreadCountUpdate(handleUnreadCountUpdate);
+    };
+  }, [onUnreadCountUpdate, offUnreadCountUpdate]);
 
   const handleChatClick = (chatId: string) => {
     navigate(`/chat/${chatId}`);

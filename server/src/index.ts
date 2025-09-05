@@ -13,6 +13,7 @@ import logger from "./utils/logger";
 // socket imports
 import { Server } from "socket.io";
 import http from "http";
+import { initializeRequirementSockets } from "./modules/reqWall/sockets/index";
 
 
 
@@ -31,7 +32,9 @@ const io = new Server(server, {
     credentials: true,
   },
 });
+
 // Initialize Socket.IO handlers
+initializeRequirementSockets(io);
 
 
 
@@ -109,7 +112,7 @@ const PORT =
     ? Number(args[portArgIndex + 1])
     : Number(process.env.PORT) || 3333;
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 // Export io for use in controllers
 export { io };

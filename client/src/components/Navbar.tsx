@@ -1,6 +1,7 @@
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Icon } from "@iconify/react";
 import { useEffect, useState } from "react";
+import { useUnreadCount } from "../hooks/UnreadCountContext";
 
 const NavButton = ({
   icon,
@@ -9,6 +10,7 @@ const NavButton = ({
   isActive,
   setCurrentTab,
   tabNo,
+  badgeCount = 0,
 }: {
   icon: string;
   title: string;
@@ -16,6 +18,7 @@ const NavButton = ({
   isActive: boolean;
   setCurrentTab: React.Dispatch<React.SetStateAction<number>>;
   tabNo: number;
+  badgeCount?: number;
 }) => {
   const navigate = useNavigate();
 
@@ -25,14 +28,21 @@ const NavButton = ({
         setCurrentTab(tabNo);
         navigate(toRoute);
       }}
-      className="flex flex-col items-center space-y-1 "
+      className="flex flex-col items-center space-y-1 relative"
     >
-      <Icon
-        icon={icon}
-        width={20}
-        height={20}
-        className={`${isActive && "text-primary"}`}
-      />
+      <div className="relative">
+        <Icon
+          icon={icon}
+          width={20}
+          height={20}
+          className={`${isActive && "text-primary"}`}
+        />
+        {badgeCount > 0 && (
+          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center min-w-[20px]">
+            {badgeCount > 99 ? '99+' : badgeCount}
+          </span>
+        )}
+      </div>
       <p className={`text-xs ${isActive && "text-primary"}`}>{title}</p>
     </div>
   );
@@ -40,6 +50,7 @@ const NavButton = ({
 
 const Navbar = () => {
   const { eventId } = useParams();
+  const { unreadCounts } = useUnreadCount();
 
   const location = useLocation();
 
@@ -87,6 +98,7 @@ const Navbar = () => {
         isActive={currentTab == 2}
         tabNo={2}
         setCurrentTab={setCurrentTab}
+        badgeCount={unreadCounts.totalUnread}
       />
       <NavButton
         icon={"carbon:user-profile"}

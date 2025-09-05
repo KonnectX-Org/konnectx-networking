@@ -335,3 +335,63 @@ export const fetchRequirementChats = asyncHandler(
     });
   }
 );
+
+// New endpoint to get total unread counts for badges
+export const getTotalUnreadCounts = asyncHandler(
+  async (req: Request, res: Response) => {
+    if (!req.eventUser) {
+      throw new AppError("Authentication required", 401);
+    }
+
+    const eventUserId = new mongoose.Types.ObjectId(String(req.eventUser.id));
+
+    // Get total unread count for "Posted by Me" (requirements posted by user)
+    const postedByMeUnreadAggregation = await ChatModel.aggregate([
+      {
+        $match: {
+          postedBy: eventUserId,
+          "unreadCount.postedBy": { $gt: 0 }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalUnread: { $sum: "$unreadCount.postedBy" }
+        }
+      }
+    ]);
+
+    // Get total unread count for "All" (requirements where user is bidder)
+    const allUnreadAggregation = await ChatModel.aggregate([
+      {
+        $match: {
+          bidderId: eventUserId,
+          "unreadCount.bidder": { $gt: 0 }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalUnread: { $sum: "$unreadCount.bidder" }
+        }
+      }
+    ]);
+
+    const postedByMeUnread = postedByMeUnreadAggregation.length > 0 
+      ? postedByMeUnreadAggregation[0].totalUnread 
+      : 0;
+    
+    const allUnread = allUnreadAggregation.length > 0 
+      ? allUnreadAggregation[0].totalUnread 
+      : 0;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        postedByMeUnread,
+        allUnread,
+        totalUnread: postedByMeUnread + allUnread
+      }
+    });
+  }
+);
