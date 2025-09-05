@@ -605,7 +605,7 @@ export const addFriendDirect = async (
   res: Response,
   next: NextFunction
 ): Promise<Response | void> => {
-  const eventUserId = req.eventUser?.id;
+  const eventUserId = new mongoose.Types.ObjectId(String(req.eventUser?.id));
   const { friendId } = req.query;
 
   if (!friendId) throw new AppError("FriendId not found", 400);

@@ -39,7 +39,7 @@ const App = () => {
       const response = await userApi.get("/user/");
 
       if (response.status == 200) {
-        const userData = { ...response.data.eventUser, ...response.data.user };
+        const userData = { ...response.data.user, ...response.data.eventUser };
         setUser(userData);
         setUserLevelData(response.data.userLevelData);
 
@@ -68,48 +68,51 @@ const App = () => {
         <SocketProvider>
           <UnreadCountProvider>
             <Routes>
-            {/* Public routes */}
-            <Route path="/login/:eventId" element={<LoginPage />} />
-            <Route path="/form/:eventId" element={<FormPage />} />
+              {/* Public routes */}
+              <Route path="/login/:eventId" element={<LoginPage />} />
+              <Route path="/form/:eventId" element={<FormPage />} />
 
-            {/* Authenticated routes with header */}
-            <Route element={<LayoutWithHeader />}>
-              <Route path="/home" element={<MainPage />} />
-              <Route path="/connect/:eventId" element={<ConnectPage />} />
-            </Route>
+              {/* Authenticated routes with header */}
+              <Route element={<LayoutWithHeader />}>
+                <Route path="/home" element={<MainPage />} />
+                <Route path="/connect/:eventId" element={<ConnectPage />} />
+              </Route>
 
-            {/* Authenticated routes without header */}
-            <Route element={<LayoutWithOutHeader />}>
-              <Route path="/notifications" element={<NotificatonsPage />} />
-              <Route path="/requests/:rtype" element={<RequestsPage />} />
-              <Route path="/network" element={<MyNetworkPage />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/requirements" element={<Requirements />} />
-              <Route
-                path="/requirements/create"
-                element={<CreateRequirement />}
-              />
-              <Route path="/requirements/inbox" element={<RequirementsInbox />} />
-              <Route
-                path="/requirements/:id"
-                element={<RequirementDescription />}
-              />
-              <Route
-                path="/requirements/allChats/:requirementId/"
-                element={<RequirementChats />}
-              />
-              <Route path="/chat/:chatId" element={<Chat />} />
-              <Route path="/profile/:id" element={<ConnectionProfile />} />
-            </Route>
+              {/* Authenticated routes without header */}
+              <Route element={<LayoutWithOutHeader />}>
+                <Route path="/notifications" element={<NotificatonsPage />} />
+                <Route path="/requests/:rtype" element={<RequestsPage />} />
+                <Route path="/network" element={<MyNetworkPage />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/requirements" element={<Requirements />} />
+                <Route
+                  path="/requirements/create"
+                  element={<CreateRequirement />}
+                />
+                <Route
+                  path="/requirements/inbox"
+                  element={<RequirementsInbox />}
+                />
+                <Route
+                  path="/requirements/:id"
+                  element={<RequirementDescription />}
+                />
+                <Route
+                  path="/requirements/allChats/:requirementId/"
+                  element={<RequirementChats />}
+                />
+                <Route path="/chat/:chatId" element={<Chat />} />
+                <Route path="/profile/:id" element={<ConnectionProfile />} />
+              </Route>
 
-            {/* Other routes */}
-            <Route path="/qr" element={<QRPage />} />
-            <Route path="/qr-connect/:friendId" element={<QRConnecting />} />
-            <Route path="/levelup" element={<LevelUpPage />} />
+              {/* Other routes */}
+              <Route path="/qr" element={<QRPage />} />
+              <Route path="/qr-connect/:friendId" element={<QRConnecting />} />
+              <Route path="/levelup" element={<LevelUpPage />} />
 
-            {/* Default redirect */}
-            {/* <Route path="/" element={<FormPage />} /> */}
-          </Routes>
+              {/* Default redirect */}
+              {/* <Route path="/" element={<FormPage />} /> */}
+            </Routes>
           </UnreadCountProvider>
         </SocketProvider>
       </UserProvider>
